@@ -1,0 +1,32 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+
+# VS Code
+.vscode/
+
+# Rider
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Env / secrets
+.env
+.env.*
+local.settings.json
+appsettings.Development.json
+
+# Terraform (global safety)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
