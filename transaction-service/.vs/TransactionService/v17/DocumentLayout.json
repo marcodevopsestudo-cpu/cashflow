@@ -3,92 +3,12 @@
   "WorkspaceRootPath": "C:\\projetos\\cashflow\\transaction-service\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{55555555-5555-5555-5555-555555555555}|tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj|c:\\projetos\\cashflow\\transaction-service\\tests\\transactionservice.unittests\\api\\createtransactionfunctiontests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{55555555-5555-5555-5555-555555555555}|tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj|solutionrelative:tests\\transactionservice.unittests\\api\\createtransactionfunctiontests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{55555555-5555-5555-5555-555555555555}|tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj|c:\\projetos\\cashflow\\transaction-service\\tests\\transactionservice.unittests\\transactionservice.unittests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{55555555-5555-5555-5555-555555555555}|tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj|solutionrelative:tests\\transactionservice.unittests\\transactionservice.unittests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{55555555-5555-5555-5555-555555555555}|tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj|c:\\projetos\\cashflow\\transaction-service\\tests\\transactionservice.unittests\\processoutboxcommandhandlertests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{55555555-5555-5555-5555-555555555555}|tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj|solutionrelative:tests\\transactionservice.unittests\\processoutboxcommandhandlertests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{55555555-5555-5555-5555-555555555555}|tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj|c:\\projetos\\cashflow\\transaction-service\\tests\\transactionservice.unittests\\gettransactionbyidqueryhandlertests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{55555555-5555-5555-5555-555555555555}|tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj|solutionrelative:tests\\transactionservice.unittests\\gettransactionbyidqueryhandlertests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.application\\transactions\\commands\\createtransaction\\createtransactioncommandvalidator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|solutionrelative:src\\transactionservice.application\\transactions\\commands\\createtransaction\\createtransactioncommandvalidator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{11111111-1111-1111-1111-111111111111}|src\\TransactionService.Api\\TransactionService.Api.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.api\\functions\\gettransactionbyidfunction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{11111111-1111-1111-1111-111111111111}|src\\TransactionService.Api\\TransactionService.Api.csproj|solutionrelative:src\\transactionservice.api\\functions\\gettransactionbyidfunction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.application\\transactions\\queries\\gettransactionbyid\\gettransactionbyidquery.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|solutionrelative:src\\transactionservice.application\\transactions\\queries\\gettransactionbyid\\gettransactionbyidquery.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.application\\transactions\\commands\\processoutbox\\processoutboxcommandvalidator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|solutionrelative:src\\transactionservice.application\\transactions\\commands\\processoutbox\\processoutboxcommandvalidator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.application\\transactions\\commands\\processoutbox\\processoutboxcommandhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|solutionrelative:src\\transactionservice.application\\transactions\\commands\\processoutbox\\processoutboxcommandhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.application\\transactions\\commands\\createtransaction\\createtransactioncommandhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|solutionrelative:src\\transactionservice.application\\transactions\\commands\\createtransaction\\createtransactioncommandhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{55555555-5555-5555-5555-555555555555}|tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj|c:\\projetos\\cashflow\\transaction-service\\tests\\transactionservice.unittests\\api\\functioncontextextensionstests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{55555555-5555-5555-5555-555555555555}|tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj|solutionrelative:tests\\transactionservice.unittests\\api\\functioncontextextensionstests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{44444444-4444-4444-4444-444444444444}|src\\TransactionService.Infrastructure\\TransactionService.Infrastructure.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.infrastructure\\idempotency\\createtransactionrequesthashservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{44444444-4444-4444-4444-444444444444}|src\\TransactionService.Infrastructure\\TransactionService.Infrastructure.csproj|solutionrelative:src\\transactionservice.infrastructure\\idempotency\\createtransactionrequesthashservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{44444444-4444-4444-4444-444444444444}|src\\TransactionService.Infrastructure\\TransactionService.Infrastructure.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.infrastructure\\dependencyinjection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{44444444-4444-4444-4444-444444444444}|src\\TransactionService.Infrastructure\\TransactionService.Infrastructure.csproj|solutionrelative:src\\transactionservice.infrastructure\\dependencyinjection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.application\\transactions\\commands\\processoutbox\\processoutboxcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|solutionrelative:src\\transactionservice.application\\transactions\\commands\\processoutbox\\processoutboxcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{11111111-1111-1111-1111-111111111111}|src\\TransactionService.Api\\TransactionService.Api.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.api\\middlewares\\idempotencykeymiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{11111111-1111-1111-1111-111111111111}|src\\TransactionService.Api\\TransactionService.Api.csproj|solutionrelative:src\\transactionservice.api\\middlewares\\idempotencykeymiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{11111111-1111-1111-1111-111111111111}|src\\TransactionService.Api\\TransactionService.Api.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.api\\common\\extensions\\functioncontextidempotencyextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{11111111-1111-1111-1111-111111111111}|src\\TransactionService.Api\\TransactionService.Api.csproj|solutionrelative:src\\transactionservice.api\\common\\extensions\\functioncontextidempotencyextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{11111111-1111-1111-1111-111111111111}|src\\TransactionService.Api\\TransactionService.Api.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.api\\middlewares\\exceptionhandlingmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{11111111-1111-1111-1111-111111111111}|src\\TransactionService.Api\\TransactionService.Api.csproj|solutionrelative:src\\transactionservice.api\\middlewares\\exceptionhandlingmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.application\\resources\\messagecatalog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|solutionrelative:src\\transactionservice.application\\resources\\messagecatalog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{11111111-1111-1111-1111-111111111111}|src\\TransactionService.Api\\TransactionService.Api.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.api\\functions\\processoutboxfunction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{11111111-1111-1111-1111-111111111111}|src\\TransactionService.Api\\TransactionService.Api.csproj|solutionrelative:src\\transactionservice.api\\functions\\processoutboxfunction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.application\\transactions\\queries\\gettransactionbyid\\gettransactionbyidqueryhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|solutionrelative:src\\transactionservice.application\\transactions\\queries\\gettransactionbyid\\gettransactionbyidqueryhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{11111111-1111-1111-1111-111111111111}|src\\TransactionService.Api\\TransactionService.Api.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.api\\common\\extensions\\functioncontextextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{11111111-1111-1111-1111-111111111111}|src\\TransactionService.Api\\TransactionService.Api.csproj|solutionrelative:src\\transactionservice.api\\common\\extensions\\functioncontextextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|c:\\projetos\\cashflow\\transaction-service\\src\\transactionservice.application\\transactions\\common\\outboxprocessordto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{22222222-2222-2222-2222-222222222222}|src\\TransactionService.Application\\TransactionService.Application.csproj|solutionrelative:src\\transactionservice.application\\transactions\\common\\outboxprocessordto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{55555555-5555-5555-5555-555555555555}|tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj|c:\\projetos\\cashflow\\transaction-service\\tests\\transactionservice.unittests\\createtransactioncommandhandlertests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{55555555-5555-5555-5555-555555555555}|tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj|solutionrelative:tests\\transactionservice.unittests\\createtransactioncommandhandlertests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -103,267 +23,28 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "CreateTransactionFunctionTests.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\tests\\TransactionService.UnitTests\\Api\\CreateTransactionFunctionTests.cs",
-              "RelativeDocumentMoniker": "tests\\TransactionService.UnitTests\\Api\\CreateTransactionFunctionTests.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\tests\\TransactionService.UnitTests\\Api\\CreateTransactionFunctionTests.cs",
-              "RelativeToolTip": "tests\\TransactionService.UnitTests\\Api\\CreateTransactionFunctionTests.cs",
-              "ViewState": "AgIAAIAAAAAAAAAAAAAQwI8AAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T18:02:49.081Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
               "Title": "GetTransactionByIdQueryHandlerTests.cs",
               "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\tests\\TransactionService.UnitTests\\GetTransactionByIdQueryHandlerTests.cs",
               "RelativeDocumentMoniker": "tests\\TransactionService.UnitTests\\GetTransactionByIdQueryHandlerTests.cs",
               "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\tests\\TransactionService.UnitTests\\GetTransactionByIdQueryHandlerTests.cs",
               "RelativeToolTip": "tests\\TransactionService.UnitTests\\GetTransactionByIdQueryHandlerTests.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T16:45:20.735Z"
+              "WhenOpened": "2026-03-20T22:34:28.51Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "TransactionService.UnitTests.csproj",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj",
-              "RelativeDocumentMoniker": "tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj",
-              "RelativeToolTip": "tests\\TransactionService.UnitTests\\TransactionService.UnitTests.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-03-20T18:13:07.004Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "CreateTransactionCommandValidator.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Commands\\CreateTransaction\\CreateTransactionCommandValidator.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Application\\Transactions\\Commands\\CreateTransaction\\CreateTransactionCommandValidator.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Commands\\CreateTransaction\\CreateTransactionCommandValidator.cs",
-              "RelativeToolTip": "src\\TransactionService.Application\\Transactions\\Commands\\CreateTransaction\\CreateTransactionCommandValidator.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAuAAAAAAAAAA==",
+              "Title": "CreateTransactionCommandHandlerTests.cs",
+              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\tests\\TransactionService.UnitTests\\CreateTransactionCommandHandlerTests.cs",
+              "RelativeDocumentMoniker": "tests\\TransactionService.UnitTests\\CreateTransactionCommandHandlerTests.cs",
+              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\tests\\TransactionService.UnitTests\\CreateTransactionCommandHandlerTests.cs",
+              "RelativeToolTip": "tests\\TransactionService.UnitTests\\CreateTransactionCommandHandlerTests.cs",
+              "ViewState": "AgIAAEUAAAAAAAAAAAAUwFMAAAAuAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T17:54:00.035Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "ProcessOutboxCommandHandlerTests.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\tests\\TransactionService.UnitTests\\ProcessOutboxCommandHandlerTests.cs",
-              "RelativeDocumentMoniker": "tests\\TransactionService.UnitTests\\ProcessOutboxCommandHandlerTests.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\tests\\TransactionService.UnitTests\\ProcessOutboxCommandHandlerTests.cs",
-              "RelativeToolTip": "tests\\TransactionService.UnitTests\\ProcessOutboxCommandHandlerTests.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAC4AAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T16:38:54.372Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "GetTransactionByIdFunction.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Api\\Functions\\GetTransactionByIdFunction.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Api\\Functions\\GetTransactionByIdFunction.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Api\\Functions\\GetTransactionByIdFunction.cs",
-              "RelativeToolTip": "src\\TransactionService.Api\\Functions\\GetTransactionByIdFunction.cs",
-              "ViewState": "AgIAABcAAAAAAAAAAAAIwBgAAABHAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T16:31:27.423Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "GetTransactionByIdQuery.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Queries\\GetTransactionById\\GetTransactionByIdQuery.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Application\\Transactions\\Queries\\GetTransactionById\\GetTransactionByIdQuery.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Queries\\GetTransactionById\\GetTransactionByIdQuery.cs",
-              "RelativeToolTip": "src\\TransactionService.Application\\Transactions\\Queries\\GetTransactionById\\GetTransactionByIdQuery.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAqwAkAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T18:07:21.795Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "ProcessOutboxCommandValidator.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Commands\\ProcessOutBox\\ProcessOutboxCommandValidator.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Application\\Transactions\\Commands\\ProcessOutBox\\ProcessOutboxCommandValidator.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Commands\\ProcessOutBox\\ProcessOutboxCommandValidator.cs",
-              "RelativeToolTip": "src\\TransactionService.Application\\Transactions\\Commands\\ProcessOutBox\\ProcessOutboxCommandValidator.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T16:50:36.138Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "ProcessOutboxCommandHandler.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Commands\\ProcessOutBox\\ProcessOutboxCommandHandler.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Application\\Transactions\\Commands\\ProcessOutBox\\ProcessOutboxCommandHandler.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Commands\\ProcessOutBox\\ProcessOutboxCommandHandler.cs",
-              "RelativeToolTip": "src\\TransactionService.Application\\Transactions\\Commands\\ProcessOutBox\\ProcessOutboxCommandHandler.cs",
-              "ViewState": "AgIAAAQAAAAAAAAAAAAwwBQAAAASAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T16:00:33.968Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "CreateTransactionCommandHandler.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Commands\\CreateTransaction\\CreateTransactionCommandHandler.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Application\\Transactions\\Commands\\CreateTransaction\\CreateTransactionCommandHandler.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Commands\\CreateTransaction\\CreateTransactionCommandHandler.cs",
-              "RelativeToolTip": "src\\TransactionService.Application\\Transactions\\Commands\\CreateTransaction\\CreateTransactionCommandHandler.cs",
-              "ViewState": "AgIAADIAAAAAAAAAAAAIwD4AAABeAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T16:28:13.41Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "FunctionContextExtensionsTests.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\tests\\TransactionService.UnitTests\\Api\\FunctionContextExtensionsTests.cs",
-              "RelativeDocumentMoniker": "tests\\TransactionService.UnitTests\\Api\\FunctionContextExtensionsTests.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\tests\\TransactionService.UnitTests\\Api\\FunctionContextExtensionsTests.cs",
-              "RelativeToolTip": "tests\\TransactionService.UnitTests\\Api\\FunctionContextExtensionsTests.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAFAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T18:02:50.925Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 11,
-              "Title": "CreateTransactionRequestHashService.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Infrastructure\\Idempotency\\CreateTransactionRequestHashService.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Infrastructure\\Idempotency\\CreateTransactionRequestHashService.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Infrastructure\\Idempotency\\CreateTransactionRequestHashService.cs",
-              "RelativeToolTip": "src\\TransactionService.Infrastructure\\Idempotency\\CreateTransactionRequestHashService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAAyAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T18:02:47.164Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
-              "Title": "DependencyInjection.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Infrastructure\\DependencyInjection.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Infrastructure\\DependencyInjection.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Infrastructure\\DependencyInjection.cs",
-              "RelativeToolTip": "src\\TransactionService.Infrastructure\\DependencyInjection.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAzAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T18:02:43.75Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 13,
-              "Title": "ProcessOutboxCommand.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Commands\\ProcessOutBox\\ProcessOutboxCommand.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Application\\Transactions\\Commands\\ProcessOutBox\\ProcessOutboxCommand.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Commands\\ProcessOutBox\\ProcessOutboxCommand.cs",
-              "RelativeToolTip": "src\\TransactionService.Application\\Transactions\\Commands\\ProcessOutBox\\ProcessOutboxCommand.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAZAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T16:34:16.729Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 14,
-              "Title": "IdempotencyKeyMiddleware.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Api\\Middlewares\\IdempotencyKeyMiddleware.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Api\\Middlewares\\IdempotencyKeyMiddleware.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Api\\Middlewares\\IdempotencyKeyMiddleware.cs",
-              "RelativeToolTip": "src\\TransactionService.Api\\Middlewares\\IdempotencyKeyMiddleware.cs",
-              "ViewState": "AgIAAA8AAAAAAAAAAAAAACwAAAAvAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T17:20:12.953Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 15,
-              "Title": "FunctionContextIdempotencyExtensions.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Api\\Common\\Extensions\\FunctionContextIdempotencyExtensions.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Api\\Common\\Extensions\\FunctionContextIdempotencyExtensions.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Api\\Common\\Extensions\\FunctionContextIdempotencyExtensions.cs",
-              "RelativeToolTip": "src\\TransactionService.Api\\Common\\Extensions\\FunctionContextIdempotencyExtensions.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAqwBgAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T17:21:56.426Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 17,
-              "Title": "MessageCatalog.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Resources\\MessageCatalog.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Application\\Resources\\MessageCatalog.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Resources\\MessageCatalog.cs",
-              "RelativeToolTip": "src\\TransactionService.Application\\Resources\\MessageCatalog.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAA1AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T16:51:27.302Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 16,
-              "Title": "ExceptionHandlingMiddleware.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Api\\Middlewares\\ExceptionHandlingMiddleware.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Api\\Middlewares\\ExceptionHandlingMiddleware.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Api\\Middlewares\\ExceptionHandlingMiddleware.cs",
-              "RelativeToolTip": "src\\TransactionService.Api\\Middlewares\\ExceptionHandlingMiddleware.cs",
-              "ViewState": "AgIAAAgAAAAAAAAAAAAcwCcAAAA2AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T17:20:28.375Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 20,
-              "Title": "FunctionContextExtensions.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Api\\Common\\Extensions\\FunctionContextExtensions.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Api\\Common\\Extensions\\FunctionContextExtensions.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Api\\Common\\Extensions\\FunctionContextExtensions.cs",
-              "RelativeToolTip": "src\\TransactionService.Api\\Common\\Extensions\\FunctionContextExtensions.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAASAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T16:38:13.937Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 18,
-              "Title": "ProcessOutboxFunction.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Api\\Functions\\ProcessOutboxFunction.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Api\\Functions\\ProcessOutboxFunction.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Api\\Functions\\ProcessOutboxFunction.cs",
-              "RelativeToolTip": "src\\TransactionService.Api\\Functions\\ProcessOutboxFunction.cs",
-              "ViewState": "AgIAABsAAAAAAAAAAAAAwCwAAAAIAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T16:31:07.233Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 19,
-              "Title": "GetTransactionByIdQueryHandler.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Queries\\GetTransactionById\\GetTransactionByIdQueryHandler.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Application\\Transactions\\Queries\\GetTransactionById\\GetTransactionByIdQueryHandler.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Queries\\GetTransactionById\\GetTransactionByIdQueryHandler.cs",
-              "RelativeToolTip": "src\\TransactionService.Application\\Transactions\\Queries\\GetTransactionById\\GetTransactionByIdQueryHandler.cs",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T16:43:51.396Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 21,
-              "Title": "OutboxProcessorDto.cs",
-              "DocumentMoniker": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Common\\OutboxProcessorDto.cs",
-              "RelativeDocumentMoniker": "src\\TransactionService.Application\\Transactions\\Common\\OutboxProcessorDto.cs",
-              "ToolTip": "C:\\projetos\\cashflow\\transaction-service\\src\\TransactionService.Application\\Transactions\\Common\\OutboxProcessorDto.cs",
-              "RelativeToolTip": "src\\TransactionService.Application\\Transactions\\Common\\OutboxProcessorDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T16:29:42.114Z"
+              "WhenOpened": "2026-03-20T22:34:13.356Z",
+              "EditorCaption": ""
             }
           ]
         }

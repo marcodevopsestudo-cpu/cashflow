@@ -11,6 +11,7 @@ on:
     paths:
       - "infra/**"
       - ".github/workflows/infra-ci.yml"
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -18,6 +19,10 @@ permissions:
 
 env:
   TERRAFORM_WORKING_DIR: ./infra/envs/dev
+
+concurrency:
+  group: infra-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   terraform-plan:
@@ -43,8 +48,30 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Generate backend.hcl
+        shell: bash
+        env:
+          TFSTATE_RESOURCE_GROUP: ${{ vars.TFSTATE_RESOURCE_GROUP }}
+          TFSTATE_STORAGE_ACCOUNT: ${{ vars.TFSTATE_STORAGE_ACCOUNT }}
+          TFSTATE_CONTAINER: ${{ vars.TFSTATE_CONTAINER }}
+          TFSTATE_KEY: ${{ vars.TFSTATE_KEY }}
+        run: |
+          set -euo pipefail
+          : "${TFSTATE_RESOURCE_GROUP:?Missing TFSTATE_RESOURCE_GROUP repository variable}"
+          : "${TFSTATE_STORAGE_ACCOUNT:?Missing TFSTATE_STORAGE_ACCOUNT repository variable}"
+          CONTAINER="${TFSTATE_CONTAINER:-tfstate}"
+          KEY="${TFSTATE_KEY:-cashflow/dev/terraform.tfstate}"
+
+          cat > backend.hcl <<EOF
+          resource_group_name  = "$TFSTATE_RESOURCE_GROUP"
+          storage_account_name = "$TFSTATE_STORAGE_ACCOUNT"
+          container_name       = "$CONTAINER"
+          key                  = "$KEY"
+          use_azuread_auth     = true
+          EOF
+
       - name: Terraform Init
-        run: terraform init -input=false
+        run: terraform init -input=false -backend-config=backend.hcl
 
       - name: Terraform Fmt
         run: terraform fmt -check -recursive
@@ -54,16 +81,7 @@ jobs:
 
       - name: Terraform Plan
         run: |
-          terraform plan \
-            -input=false \
-            -out=tfplan \
-            -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
-            -var="tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
-            -var="github_owner=${{ vars.GITHUB_OWNER }}" \
-            -var="github_repo=${{ vars.GITHUB_REPO }}" \
-            -var="github_branch=${{ vars.GITHUB_BRANCH }}" \
-            -var="postgres_admin_username=${{ secrets.POSTGRES_ADMIN_USERNAME }}" \
-            -var="postgres_admin_password=${{ secrets.POSTGRES_ADMIN_PASSWORD }}"
+          terraform plan             -input=false             -out=tfplan             -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"             -var="tenant_id=${{ secrets.AZURE_TENANT_ID }}"             -var="github_owner=${{ vars.GITHUB_OWNER }}"             -var="github_repo=${{ vars.GITHUB_REPO }}"             -var="github_branch=${{ vars.GITHUB_BRANCH }}"             -var="postgres_admin_username=${{ secrets.POSTGRES_ADMIN_USERNAME }}"             -var="postgres_admin_password=${{ secrets.POSTGRES_ADMIN_PASSWORD }}"
 
       - name: Upload tfplan artifact
         uses: actions/upload-artifact@v4

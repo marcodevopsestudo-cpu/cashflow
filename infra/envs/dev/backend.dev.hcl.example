@@ -1,0 +1,5 @@
+resource_group_name  = "rg-cashflow-tfstate"
+storage_account_name = "stcashflowtf12345"
+container_name       = "tfstate"
+key                  = "cashflow/dev/terraform.tfstate"
+use_azuread_auth     = true

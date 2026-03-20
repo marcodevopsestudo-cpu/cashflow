@@ -76,7 +76,6 @@ module "postgres" {
 module "key_vault" {
   source                      = "../../modules/key_vault"
   name                        = substr("kv-${local.prefix}", 0, 24)
-  environment                 = var.environment 
   resource_group_name         = module.rg.name
   location                    = module.rg.location
   tenant_id                   = var.tenant_id

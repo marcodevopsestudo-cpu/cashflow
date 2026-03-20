@@ -1,11 +1,14 @@
-
+locals {
+  sanitized_name = substr(lower(replace(var.name, "_", "-")), 0, 24)
+}
 
 resource "azurerm_key_vault" "this" {
-  name                = "kv-${var.name}-${var.environment}"
+  name                = local.sanitized_name
   location            = var.location
   resource_group_name = var.resource_group_name
   tenant_id           = var.tenant_id
   sku_name            = "standard"
+  tags                = var.tags
 
   soft_delete_retention_days = 7
   purge_protection_enabled   = false

@@ -6,6 +6,7 @@ using TransactionService.Application.Abstractions.Persistence;
 using TransactionService.Application.Common.Exceptions;
 using TransactionService.Application.Transactions.Commands.CreateTransaction;
 using TransactionService.Domain.Entities;
+using TransactionService.Domain.Enums;
 using Xunit;
 
 namespace TransactionService.UnitTests;
@@ -72,7 +73,7 @@ public sealed class CreateTransactionCommandHandlerTests
 
         var persistedTransaction = Transaction.Create(
             "ACC-001",
-            Domain.Enums.TransactionKind.Credit,
+           TransactionKind.Credit,
             100,
             "BRL",
             DateTime.UtcNow,

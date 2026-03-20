@@ -22,6 +22,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\TransactionService.Application\TransactionService.Application.csproj" />
 		<ProjectReference Include="..\..\src\TransactionService.Domain\TransactionService.Domain.csproj" />
+		<ProjectReference Include="..\..\src\TransactionService.Infrastructure\TransactionService.Infrastructure.csproj" />
 		<ProjectReference Include="..\..\src\TransactionService.Api\TransactionService.Api.csproj" />
 	</ItemGroup>
 

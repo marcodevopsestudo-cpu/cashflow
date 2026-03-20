@@ -1,0 +1,19 @@
+# Terraform cache and local state
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+.terraform.lock.hcl
+
+# Local variable files
+terraform.tfvars
+*.auto.tfvars
+*.auto.tfvars.json
+*.tfvars
+*.tfvars.json
+
+# Local backend configuration
+backend.hcl
+backend.*.hcl

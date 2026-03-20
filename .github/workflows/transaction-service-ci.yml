@@ -13,14 +13,15 @@ on:
       - "transaction-service/**"
       - "db-migrator/**"
       - ".github/workflows/transaction-service-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: transaction-service-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-test:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: ./transaction-service
 
     steps:
       - name: Checkout
@@ -30,12 +31,32 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+          cache: true
+          cache-dependency-path: |
+            transaction-service/**/*.csproj
+            transaction-service/**/*.props
+            transaction-service/**/*.sln
+            db-migrator/*.csproj
 
-      - name: Restore
-        run: dotnet restore
+      - name: Restore transaction-service
+        run: dotnet restore ./transaction-service/TransactionService.sln
 
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
+      - name: Build transaction-service
+        run: dotnet build ./transaction-service/TransactionService.sln --configuration Release --no-restore
 
-      - name: Test
-        run: dotnet test --configuration Release --no-build --verbosity normal
+      - name: Test transaction-service
+        run: dotnet test ./transaction-service/tests/TransactionService.UnitTests/TransactionService.UnitTests.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+      - name: Restore db-migrator
+        run: dotnet restore ./db-migrator/db-migrator.csproj
+
+      - name: Build db-migrator
+        run: dotnet build ./db-migrator/db-migrator.csproj --configuration Release --no-restore
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transaction-service-test-results
+          path: |
+            transaction-service/**/TestResults/**
