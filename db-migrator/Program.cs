@@ -1,135 +1,123 @@
+using System.Security.Cryptography;
 using Npgsql;
-using System;
-using System.IO;
-using System.Linq;
 
 const string MigrationTable = "__schema_migrations";
 
-// -----------------------------
-// Resolve connection string
-// -----------------------------
 var connectionString =
     Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
     ?? Environment.GetEnvironmentVariable("POSTGRES_CONNECTION")
     ?? throw new InvalidOperationException("Connection string not found. Use ConnectionStrings__Postgres or POSTGRES_CONNECTION.");
 
-// -----------------------------
-// Resolve migrations path
-// -----------------------------
-string? argPath = args
-    .FirstOrDefault(a => a.StartsWith("--migrations-path="))
-    ?.Split("=", 2)[1];
-
-var migrationsPath =
-    argPath
-    ?? Environment.GetEnvironmentVariable("MIGRATIONS_PATH")
-    ?? Path.Combine(AppContext.BaseDirectory, "migrations");
-
+var migrationsPath = ResolveMigrationsPath(args);
 Console.WriteLine($"[Migrator] Using migrations path: {migrationsPath}");
 
 if (!Directory.Exists(migrationsPath))
+{
     throw new DirectoryNotFoundException($"Migrations path not found: {migrationsPath}");
+}
 
-// -----------------------------
-// Load scripts
-// -----------------------------
-var scripts = Directory.GetFiles(migrationsPath, "*.sql")
-    .OrderBy(x => x)
+var scripts = Directory.GetFiles(migrationsPath, "*.sql", SearchOption.TopDirectoryOnly)
+    .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
     .ToList();
 
-if (!scripts.Any())
+if (scripts.Count == 0)
 {
     Console.WriteLine("[Migrator] No migration scripts found.");
     return;
 }
 
-// -----------------------------
-// Connect DB
-// -----------------------------
-await using var conn = new NpgsqlConnection(connectionString);
+await using var connection = new NpgsqlConnection(connectionString);
+await connection.OpenAsync();
 
-try
+await EnsureMigrationTableAsync(connection);
+
+foreach (var scriptPath in scripts)
 {
-    await conn.OpenAsync();
-}
-catch (Exception ex)
-{
-    Console.WriteLine("[Migrator] Failed to connect to database.");
-    Console.WriteLine(ex);
-    throw;
-}
+    var scriptName = Path.GetFileName(scriptPath);
+    var checksum = CalculateChecksum(await File.ReadAllTextAsync(scriptPath));
 
-// -----------------------------
-// Ensure migration table
-// -----------------------------
-var createTableSql = $@"
-CREATE TABLE IF NOT EXISTS {MigrationTable} (
-    id SERIAL PRIMARY KEY,
-    script_name TEXT NOT NULL UNIQUE,
-    executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);";
-
-await using (var cmd = new NpgsqlCommand(createTableSql, conn))
-{
-    await cmd.ExecuteNonQueryAsync();
-}
-
-// -----------------------------
-// Execute migrations
-// -----------------------------
-foreach (var script in scripts)
-{
-    var scriptName = Path.GetFileName(script);
-
-    // Check if already executed
-    await using var checkCmd = new NpgsqlCommand(
-        $"SELECT COUNT(1) FROM {MigrationTable} WHERE script_name = @name",
-        conn
-    );
-
-    checkCmd.Parameters.AddWithValue("name", scriptName);
-
-    var alreadyExecuted = (long)(await checkCmd.ExecuteScalarAsync() ?? 0) > 0;
-
-    if (alreadyExecuted)
+    var existingChecksum = await GetExistingChecksumAsync(connection, scriptName);
+    if (existingChecksum is not null)
     {
+        if (!string.Equals(existingChecksum, checksum, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Migration '{scriptName}' was already applied with a different checksum. Create a new migration instead of editing an existing file.");
+        }
+
         Console.WriteLine($"[Migrator] SKIPPED: {scriptName}");
         continue;
     }
 
     Console.WriteLine($"[Migrator] RUNNING: {scriptName}");
 
-    var sql = await File.ReadAllTextAsync(script);
-
-    await using var tx = await conn.BeginTransactionAsync();
+    var sql = await File.ReadAllTextAsync(scriptPath);
+    await using var transaction = await connection.BeginTransactionAsync();
 
     try
     {
-        // Execute script
-        await using var execCmd = new NpgsqlCommand(sql, conn, tx);
-        await execCmd.ExecuteNonQueryAsync();
+        await using var executeCommand = new NpgsqlCommand(sql, connection, transaction);
+        await executeCommand.ExecuteNonQueryAsync();
 
-        // Register migration
-        await using var insertCmd = new NpgsqlCommand(
-            $"INSERT INTO {MigrationTable} (script_name) VALUES (@name)",
-            conn, tx
-        );
-        insertCmd.Parameters.AddWithValue("name", scriptName);
-        await insertCmd.ExecuteNonQueryAsync();
+        await using var insertCommand = new NpgsqlCommand(
+            $"INSERT INTO {MigrationTable} (script_name, checksum) VALUES (@name, @checksum)",
+            connection,
+            transaction);
+        insertCommand.Parameters.AddWithValue("name", scriptName);
+        insertCommand.Parameters.AddWithValue("checksum", checksum);
+        await insertCommand.ExecuteNonQueryAsync();
 
-        await tx.CommitAsync();
-
+        await transaction.CommitAsync();
         Console.WriteLine($"[Migrator] DONE: {scriptName}");
     }
-    catch (Exception ex)
+    catch
     {
-        await tx.RollbackAsync();
-
+        await transaction.RollbackAsync();
         Console.WriteLine($"[Migrator] FAILED: {scriptName}");
-        Console.WriteLine(ex);
-
         throw;
     }
 }
 
 Console.WriteLine("[Migrator] All migrations completed successfully.");
+
+static string ResolveMigrationsPath(string[] args)
+{
+    var cliArgument = args.FirstOrDefault(static value => value.StartsWith("--migrations-path=", StringComparison.OrdinalIgnoreCase));
+    if (!string.IsNullOrWhiteSpace(cliArgument))
+    {
+        return cliArgument.Split('=', 2)[1];
+    }
+
+    return Environment.GetEnvironmentVariable("MIGRATIONS_PATH")
+        ?? Path.Combine(AppContext.BaseDirectory, "migrations");
+}
+
+static async Task EnsureMigrationTableAsync(NpgsqlConnection connection)
+{
+    var sql = $@"
+CREATE TABLE IF NOT EXISTS {MigrationTable} (
+    id SERIAL PRIMARY KEY,
+    script_name TEXT NOT NULL UNIQUE,
+    checksum TEXT NOT NULL,
+    executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);";
+
+    await using var command = new NpgsqlCommand(sql, connection);
+    await command.ExecuteNonQueryAsync();
+}
+
+static async Task<string?> GetExistingChecksumAsync(NpgsqlConnection connection, string scriptName)
+{
+    await using var command = new NpgsqlCommand(
+        $"SELECT checksum FROM {MigrationTable} WHERE script_name = @name",
+        connection);
+    command.Parameters.AddWithValue("name", scriptName);
+
+    var result = await command.ExecuteScalarAsync();
+    return result as string;
+}
+
+static string CalculateChecksum(string content)
+{
+    var bytes = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content));
+    return Convert.ToHexString(bytes);
+}

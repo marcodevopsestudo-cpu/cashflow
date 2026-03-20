@@ -5,9 +5,10 @@ using TransactionService.Application.Abstractions.Persistence;
 using TransactionService.Application.Common.Exceptions;
 using TransactionService.Application.Transactions.Queries.GetTransactionById;
 using TransactionService.Domain.Entities;
+using TransactionService.Domain.Enums;
 using Xunit;
 
-namespace TransactionService.UnitTests.Application.Transactions.Queries;
+namespace TransactionService.UnitTests;
 
 /// <summary>
 /// Contains unit tests for the transaction retrieval query handler.
@@ -24,7 +25,7 @@ public sealed class GetTransactionByIdQueryHandlerTests
 
         var transaction = Transaction.Create(
             "ACC-001",
-            Domain.Enums.TransactionKind.Credit,
+            TransactionKind.Credit,
             150.75m,
             "BRL",
             DateTime.UtcNow,

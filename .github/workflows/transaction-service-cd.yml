@@ -8,28 +8,29 @@ on:
       - "transaction-service/**"
       - "db-migrator/**"
       - ".github/workflows/transaction-service-cd.yml"
+  workflow_dispatch:
 
 permissions:
   id-token: write
   contents: read
 
 env:
-  AZURE_FUNCTIONAPP_NAME: func-cashflow-dev-tx
-  API_PROJECT_PATH: ./transaction-service/src/TransactionService.Api
-  API_PUBLISH_PATH: ./transaction-service/publish
-  DB_MIGRATOR_PROJECT_PATH: ./db-migrator
+  API_PROJECT_PATH: ./transaction-service/src/TransactionService.Api/TransactionService.Api.csproj
+  API_PUBLISH_PATH: ./artifacts/transaction-service
+  DB_MIGRATOR_PROJECT_PATH: ./db-migrator/db-migrator.csproj
   MIGRATIONS_PATH: ./transaction-service/scripts
-  KEY_VAULT_NAME: kv-cashflow-dev-dev
-  POSTGRES_SECRET_NAME: postgres-connection-string
+  AZURE_FUNCTIONAPP_NAME: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
+  KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME }}
+  POSTGRES_SECRET_NAME: ${{ vars.POSTGRES_SECRET_NAME }}
+
+concurrency:
+  group: transaction-service-cd-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build-test:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: ./transaction-service
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,19 +39,32 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+          cache: true
+          cache-dependency-path: |
+            transaction-service/**/*.csproj
+            transaction-service/**/*.props
+            transaction-service/**/*.sln
+            db-migrator/*.csproj
 
-      - name: Restore
-        run: dotnet restore
+      - name: Restore transaction-service
+        run: dotnet restore ./transaction-service/TransactionService.sln
 
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
+      - name: Build transaction-service
+        run: dotnet build ./transaction-service/TransactionService.sln --configuration Release --no-restore
 
-      - name: Test
-        run: dotnet test --configuration Release --no-build --verbosity normal
+      - name: Test transaction-service
+        run: dotnet test ./transaction-service/tests/TransactionService.UnitTests/TransactionService.UnitTests.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+      - name: Restore db-migrator
+        run: dotnet restore ./db-migrator/db-migrator.csproj
+
+      - name: Build db-migrator
+        run: dotnet build ./db-migrator/db-migrator.csproj --configuration Release --no-restore
 
   migrate-db:
     runs-on: ubuntu-latest
     needs: build-test
+    environment: dev
 
     steps:
       - name: Checkout
@@ -60,6 +74,12 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+          cache: true
+          cache-dependency-path: |
+            transaction-service/**/*.csproj
+            transaction-service/**/*.props
+            transaction-service/**/*.sln
+            db-migrator/*.csproj
 
       - name: Azure login with OIDC
         uses: azure/login@v2
@@ -71,19 +91,18 @@ jobs:
       - name: Read Postgres connection string from Key Vault
         shell: bash
         run: |
-          CONNECTION_STRING=$(az keyvault secret show \
-            --vault-name "$KEY_VAULT_NAME" \
-            --name "$POSTGRES_SECRET_NAME" \
-            --query value -o tsv)
+          set -euo pipefail
+          CONNECTION_STRING=$(az keyvault secret show             --vault-name "$KEY_VAULT_NAME"             --name "$POSTGRES_SECRET_NAME"             --query value -o tsv)
 
-          echo "ConnectionStrings__Postgres=$CONNECTION_STRING" >> $GITHUB_ENV
+          echo "ConnectionStrings__Postgres=$CONNECTION_STRING" >> "$GITHUB_ENV"
 
       - name: Run DB migrations
-        run: dotnet run --project ${{ env.DB_MIGRATOR_PROJECT_PATH }} -- --migrations-path=${{ env.MIGRATIONS_PATH }}
+        run: dotnet run --project ${{ env.DB_MIGRATOR_PROJECT_PATH }} --configuration Release -- --migrations-path=${{ env.MIGRATIONS_PATH }}
 
   deploy:
     runs-on: ubuntu-latest
     needs: migrate-db
+    environment: dev
 
     steps:
       - name: Checkout
@@ -93,14 +112,13 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+          cache: true
+          cache-dependency-path: |
+            transaction-service/**/*.csproj
+            transaction-service/**/*.props
+            transaction-service/**/*.sln
 
-      - name: Restore API
-        run: dotnet restore ${{ env.API_PROJECT_PATH }}
-
-      - name: Build API
-        run: dotnet build ${{ env.API_PROJECT_PATH }} --configuration Release --no-restore
-
-      - name: Publish API
+      - name: Publish Function App
         run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --output ${{ env.API_PUBLISH_PATH }}
 
       - name: Azure login with OIDC

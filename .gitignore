@@ -1,32 +1,43 @@
-# .NET
-bin/
-obj/
-*.user
-*.suo
-*.userprefs
-
-# VS Code
-.vscode/
-
-# Rider
-.idea/
-
-# OS
+# Operating system
 .DS_Store
 Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.suo
+*.user
+*.userprefs
+
+# .NET build output
+**/bin/
+**/obj/
+TestResults/
+*.trx
+coverage/
+coverage.cobertura.xml
+
+# Azure Functions local settings
+**/local.settings.json
+appsettings.Development.json
+.env
+.env.*
+
+# Terraform local state and cache
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
 
 # Logs
 *.log
 
-# Env / secrets
-.env
-.env.*
-local.settings.json
-appsettings.Development.json
-
-# Terraform (global safety)
-*.tfstate
-*.tfstate.*
-.terraform/
-.terraform.lock.hcl
-crash.log
+# Archives generated locally
+*.zip
