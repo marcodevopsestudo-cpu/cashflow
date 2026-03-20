@@ -15,12 +15,12 @@ public sealed class CallerPrincipalParserTests
         var request = new FakeHttpRequestData(context, new { }, HttpMethod.Post.Method);
         request.Headers.Add(AuthorizationConstants.ClientPrincipalHeaderName, Encode("""
         {
-          \"claims\": [
-            { \"typ\": \"appid\", \"val\": \"client-app-id\" },
-            { \"typ\": \"tid\", \"val\": \"tenant-id\" },
-            { \"typ\": \"aud\", \"val\": \"api://transaction-service\" },
-            { \"typ\": \"iss\", \"val\": \"https://sts.windows.net/tenant-id/\" },
-            { \"typ\": \"roles\", \"val\": \"transactions.write\" }
+          "claims": [
+            { "typ": "appid", "val": "client-app-id" },
+            { "typ": "tid", "val": "tenant-id" },
+            { "typ": "aud", "val": "api://transaction-service" },
+            { "typ": "iss", "val": "https://sts.windows.net/tenant-id/" },
+            { "typ": "roles", "val": "transactions.write" }
           ]
         }
         """));

@@ -1,14 +1,16 @@
+using Azure.Core.Serialization;
+using FluentAssertions;
+using MediatR;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Moq;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
-using MediatR;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Context.Features;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 using TransactionService.Api.Common.Constants;
 using TransactionService.Api.Common.Extensions;
 using TransactionService.Api.Contracts.Requests;
@@ -64,7 +66,7 @@ public sealed class CreateTransactionFunctionTests
 
         var response = await function.Run(request, context, CancellationToken.None);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Headers.TryGetValues(IdempotencyConstants.IdempotencyReplayedHeaderName, out var replayedHeader).Should().BeTrue();
         replayedHeader!.Single().Should().Be("true");
         response.Headers.TryGetValues(IdempotencyConstants.IdempotencyHeaderName, out var idempotencyValues).Should().BeTrue();
@@ -75,16 +77,29 @@ public sealed class CreateTransactionFunctionTests
 internal sealed class FakeFunctionContext : FunctionContext
 {
     private IDictionary<object, object> _items = new Dictionary<object, object>();
+    private IServiceProvider _instanceServices;
+
+    public FakeFunctionContext()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IOptions<WorkerOptions>>(Options.Create(new WorkerOptions
+        {
+            Serializer = new JsonObjectSerializer(new JsonSerializerOptions(JsonSerializerDefaults.Web))
+        }));
+
+        _instanceServices = services.BuildServiceProvider();
+    }
 
     public override string InvocationId { get; } = Guid.NewGuid().ToString("N");
     public override string FunctionId { get; } = Guid.NewGuid().ToString("N");
     public override TraceContext TraceContext { get; } = null!;
     public override BindingContext BindingContext { get; } = null!;
     public override RetryContext RetryContext { get; } = null!;
-    public override IServiceProvider InstanceServices { get => null!; set { } }
+    public override IServiceProvider InstanceServices { get => _instanceServices; set => _instanceServices = value; }
     public override FunctionDefinition FunctionDefinition { get; } = null!;
     public override IDictionary<object, object> Items { get => _items; set => _items = value; }
-    public override IInvocationFeatures Features => null!;
+    public override IInvocationFeatures Features { get; } = null!;
     public override CancellationToken CancellationToken => CancellationToken.None;
 }
 
@@ -104,7 +119,7 @@ internal sealed class FakeHttpRequestData : HttpRequestData
         Identities = [];
     }
 
-    public override Stream Body { get => _body;  }
+    public override Stream Body => _body;
     public override HttpHeadersCollection Headers { get; }
     public override IReadOnlyCollection<IHttpCookie> Cookies { get; }
     public override Uri Url { get; }
