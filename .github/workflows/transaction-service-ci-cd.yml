@@ -25,7 +25,7 @@ env:
   TEST_WORKING_DIR: ./transaction-service
   DB_MIGRATOR_PROJECT_PATH: ./db-migrator
   MIGRATIONS_PATH: ./transaction-service/scripts
-  KEY_VAULT_NAME: kv-cashflow-dev-dev
+  KEY_VAULT_NAME: eazvxb-kv-cashflow-dev
   POSTGRES_SECRET_NAME: postgres-connection-string
 
 jobs:
