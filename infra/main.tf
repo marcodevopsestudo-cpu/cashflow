@@ -178,10 +178,30 @@ module "function" {
   ]
 }
 
-module "rbac" {
-  source            = "./modules/role_assignments"
-  principal_id      = module.function.principal_id
-  key_vault_scope   = module.key_vault.id
-  service_bus_scope = module.service_bus.id
-  storage_scope     = module.storage.id
+module "rbac_service_bus_assignment" {
+  source                = "./modules/role_assignments"
+  principal_id          = module.function.principal_id
+  role_definition_name  = "Azure Service Bus Data Sender"
+  service_scope         = module.service_bus.id
+
 }
+module "rbac_storage_blob_assignment" {
+  source                = "./modules/role_assignments"
+  principal_id          = module.function.principal_id
+  role_definition_name  = "Storage Blob Data Contributor"
+  service_scope         = module.storage.id
+}
+module "rbac_key_vault_assignment" {
+  source                = "./modules/role_assignments"
+  principal_id          = module.function.principal_id
+  role_definition_name = "Key Vault Secrets User"
+  service_scope         = module.key_vault.id
+}
+module "rbac_service_principal_assignment" {
+  source                = "./modules/role_assignments"
+  principal_id          =  module.github_oidc.service_principal_object_id
+  role_definition_name  = "Contributor"
+  service_scope         = "/subscriptions/${var.subscription_id}"
+}
+
+

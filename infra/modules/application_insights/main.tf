@@ -4,4 +4,7 @@ resource "azurerm_application_insights" "this" {
   resource_group_name = var.resource_group_name
   application_type    = var.application_type
   tags                = var.tags
+  lifecycle {
+    ignore_changes = [workspace_id]
+  }
 }
