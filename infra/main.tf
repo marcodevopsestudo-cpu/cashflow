@@ -126,41 +126,29 @@ module "function" {
   location                               = module.rg.location
   service_plan_id                        = module.plan.id
   storage_account_name                   = module.storage.name
-  storage_account_access_key             = module.storage.primary_access_key
   application_insights_connection_string = module.appinsights.connection_string
+  key_vault_reference_identity_id        = null
+  tags                                   = local.tags
+  environment                            = var.environment
+  project_name                           = var.project_name
 
   app_settings = {
-    # Core
-    FUNCTIONS_WORKER_RUNTIME    = "dotnet-isolated"
-    FUNCTIONS_EXTENSION_VERSION = "~4"
-    ASPNETCORE_ENVIRONMENT      = var.environment
-
-    # REQUIRED
-    AzureWebJobsStorage = module.storage.primary_connection_string
-
-    # Service Bus
-    ServiceBus__TopicName               = module.service_bus.topic_name
-    ServiceBus__FullyQualifiedNamespace = module.service_bus.namespace_fqdn
-    ServiceBus__UseManagedIdentity      = "true"
-
-    # (fallback opcional - igual seu local)
-    ServiceBus__ConnectionString = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.servicebus_connection_string.versionless_id})"
-
-    # Database
-    ConnectionStrings__Postgres = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.postgres_connection_string.versionless_id})"
-
-    # Auth config (igual seu local)
+    FUNCTIONS_WORKER_RUNTIME              = "dotnet-isolated"
+    FUNCTIONS_EXTENSION_VERSION           = "~4"
+    ASPNETCORE_ENVIRONMENT                = var.environment
+    AzureWebJobsStorage__accountName      = module.storage.name
+    ServiceBus__TopicName                 = module.service_bus.topic_name
+    ServiceBus__FullyQualifiedNamespace   = module.service_bus.namespace_fqdn
+    ServiceBus__UseManagedIdentity        = "true"
+    ServiceBus__ConnectionString          = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.servicebus_connection_string.versionless_id})"
+    ConnectionStrings__Postgres           = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.postgres_connection_string.versionless_id})"
     Authorization__Enabled                = "true"
     Authorization__AllowedAppIds__0       = module.entra_api.client_id
     Authorization__RequiredRoles__0       = "TransactionService.Access"
     Authorization__AllowedAudiences__0    = "api://${module.entra_api.client_id}"
     Authorization__AllowedIssuers__0      = "https://login.microsoftonline.com/${var.tenant_id}/v2.0"
-
-    # Observabilidade
     APPLICATIONINSIGHTS_CONNECTION_STRING = module.appinsights.connection_string
-
-    # Feature flags
-    AzureWebJobsFeatureFlags = "EnableWorkerIndexing"
+    AzureWebJobsFeatureFlags              = "EnableWorkerIndexing"
   }
 
   auth_settings = {
@@ -170,10 +158,6 @@ module "function" {
     unauthenticated_action = "Return401"
   }
 
-  key_vault_reference_identity_id = null
-
-  tags = local.tags
-
   depends_on = [
     azurerm_key_vault_secret.postgres_connection_string,
     azurerm_key_vault_secret.servicebus_connection_string
@@ -181,35 +165,50 @@ module "function" {
 }
 
 module "rbac_service_bus_assignment" {
-  source                = "./modules/role_assignments"
-  principal_id          = module.function.principal_id
-  role_definition_name  = "Azure Service Bus Data Sender"
-  service_scope         = module.service_bus.id
+  source               = "./modules/role_assignments"
+  principal_id         = module.function.principal_id
+  role_definition_name = "Azure Service Bus Data Sender"
+  service_scope        = module.service_bus.id
+}
 
-}
-module "rbac_storage_blob_assignment" {
-  source                = "./modules/role_assignments"
-  principal_id          = module.function.principal_id
-  role_definition_name  = "Storage Blob Data Contributor"
-  service_scope         = module.storage.id
-}
 module "rbac_key_vault_assignment" {
-  source                = "./modules/role_assignments"
-  principal_id          = module.function.principal_id
+  source               = "./modules/role_assignments"
+  principal_id         = module.function.principal_id
   role_definition_name = "Key Vault Secrets User"
-  service_scope         = module.key_vault.id
+  service_scope        = module.key_vault.id
 }
+
 module "rbac_service_principal_assignment" {
-  source                = "./modules/role_assignments"
-  principal_id          =  module.github_oidc.service_principal_object_id
-  role_definition_name  = "Contributor"
-  service_scope         = "/subscriptions/${var.subscription_id}"
+  source               = "./modules/role_assignments"
+  principal_id         = module.github_oidc.service_principal_object_id
+  role_definition_name = "Contributor"
+  service_scope        = "/subscriptions/${var.subscription_id}"
 }
 
 module "rbac_key_vault_assignment_principal_github_oidc" {
-  source                = "./modules/role_assignments"
-  principal_id          = module.github_oidc.service_principal_object_id
+  source               = "./modules/role_assignments"
+  principal_id         = module.github_oidc.service_principal_object_id
   role_definition_name = "Key Vault Secrets User"
-  service_scope         = module.key_vault.id
+  service_scope        = module.key_vault.id
 }
 
+module "rbac_storage_blob_owner_assignment" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.function.principal_id
+  role_definition_name = "Storage Blob Data Owner"
+  service_scope        = module.storage.id
+}
+
+module "rbac_storage_queue_contributor_assignment" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.function.principal_id
+  role_definition_name = "Storage Queue Data Contributor"
+  service_scope        = module.storage.id
+}
+
+module "rbac_storage_account_contributor_assignment" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.function.principal_id
+  role_definition_name = "Storage Account Contributor"
+  service_scope        = module.storage.id
+}
