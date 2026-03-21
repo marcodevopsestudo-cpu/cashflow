@@ -212,3 +212,17 @@ module "rbac_storage_account_contributor_assignment" {
   role_definition_name = "Storage Account Contributor"
   service_scope        = module.storage.id
 }
+module "rbac_storage_blob_data_contributor_assignment_github_oidc" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.github_oidc.service_principal_object_id
+  role_definition_name = "Storage Blob Data Contributor"
+  service_scope        = module.storage.id
+}
+
+
+module "rbac_storage_table_data_contributor_assignment" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.function.principal_id
+  role_definition_name = "Storage Table Data Contributor"
+  service_scope        = module.storage.id
+}

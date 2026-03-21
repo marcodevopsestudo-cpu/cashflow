@@ -41,3 +41,15 @@ override.tf.json
 
 # Archives generated locally
 *.zip
+
+# Visual Studio / local workspace
+.vs/
+**/.vs/
+
+# Terraform bootstrap local state
+infra/bootstrap/tfstate/.terraform/
+infra/bootstrap/tfstate/*.tfstate
+infra/bootstrap/tfstate/*.tfstate.*
+
+# Local publish output
+**/publish/
