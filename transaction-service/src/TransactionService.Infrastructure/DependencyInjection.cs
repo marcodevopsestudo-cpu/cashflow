@@ -27,9 +27,10 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString =
-       configuration.GetConnectionString("Postgres") ??
-       configuration["ConnectionStrings__Postgres"] ??
-       configuration["ConnectionStrings:Postgres"];
+        configuration.GetConnectionString("Postgres") ??
+        configuration["ConnectionStrings__Postgres"] ??
+        configuration["ConnectionStrings:Postgres"] ??
+        configuration["Values:ConnectionStrings__Postgres"];
 
         if (string.IsNullOrWhiteSpace(connectionString))
         {
