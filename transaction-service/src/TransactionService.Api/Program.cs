@@ -21,10 +21,43 @@ var host = new HostBuilder()
         services.AddInfrastructure(context.Configuration);
         services.AddApplicationInsightsTelemetryWorkerService();
         services.ConfigureFunctionsApplicationInsights();
-        services.Configure<EntraAuthorizationOptions>(context.Configuration.GetSection(EntraAuthorizationOptions.SectionName));
+        services.AddOptions<EntraAuthorizationOptions>()
+            .Configure(options =>
+            {
+                var authorizationSection = context.Configuration.GetSection(EntraAuthorizationOptions.SectionName);
+
+                options.Enabled = bool.TryParse(
+                    context.Configuration.GetSetting("Authorization:Enabled", "Authorization__Enabled") ?? authorizationSection[nameof(EntraAuthorizationOptions.Enabled)],
+                    out var enabled)
+                    ? enabled
+                    : options.Enabled;
+
+                options.AllowedAppIds = context.Configuration.GetArraySetting(
+                    "Authorization:AllowedAppIds",
+                    "Authorization__AllowedAppIds") is { Length: > 0 } allowedAppIds
+                    ? allowedAppIds
+                    : authorizationSection.GetSection(nameof(EntraAuthorizationOptions.AllowedAppIds)).Get<string[]>() ?? [];
+
+                options.RequiredRoles = context.Configuration.GetArraySetting(
+                    "Authorization:RequiredRoles",
+                    "Authorization__RequiredRoles") is { Length: > 0 } requiredRoles
+                    ? requiredRoles
+                    : authorizationSection.GetSection(nameof(EntraAuthorizationOptions.RequiredRoles)).Get<string[]>() ?? [];
+
+                options.AllowedAudiences = context.Configuration.GetArraySetting(
+                    "Authorization:AllowedAudiences",
+                    "Authorization__AllowedAudiences") is { Length: > 0 } allowedAudiences
+                    ? allowedAudiences
+                    : authorizationSection.GetSection(nameof(EntraAuthorizationOptions.AllowedAudiences)).Get<string[]>() ?? [];
+
+                options.AllowedIssuers = context.Configuration.GetArraySetting(
+                    "Authorization:AllowedIssuers",
+                    "Authorization__AllowedIssuers") is { Length: > 0 } allowedIssuers
+                    ? allowedIssuers
+                    : authorizationSection.GetSection(nameof(EntraAuthorizationOptions.AllowedIssuers)).Get<string[]>() ?? [];
+            });
         services.AddSingleton<EntraAuthorizationEvaluator>();
     })
     .Build();
 
 await host.RunAsync();
-

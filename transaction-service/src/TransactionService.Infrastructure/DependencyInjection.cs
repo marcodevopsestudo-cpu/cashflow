@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using TransactionService.Application.Abstractions.Idempotency;
 using TransactionService.Application.Abstractions.Messaging;
 using TransactionService.Application.Abstractions.Persistence;
@@ -26,10 +27,20 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("Postgres")
-            ?? configuration["ConnectionStrings__Postgres"]
-            ?? throw new InvalidOperationException("ConnectionStrings__Postgres was not configured.");
+            ?? configuration.GetSetting("ConnectionStrings:Postgres", "ConnectionStrings__Postgres")
+            ?? throw new InvalidOperationException(
+                "Postgres connection string not found. Configure ConnectionStrings__Postgres.");
 
-        services.Configure<ServiceBusOptions>(configuration.GetSection("ServiceBus"));
+        var serviceBusOptions = BuildServiceBusOptions(configuration);
+
+        services.AddOptions<ServiceBusOptions>()
+            .Configure(options =>
+            {
+                options.TopicName = serviceBusOptions.TopicName;
+                options.FullyQualifiedNamespace = serviceBusOptions.FullyQualifiedNamespace;
+                options.ConnectionString = serviceBusOptions.ConnectionString;
+                options.UseManagedIdentity = serviceBusOptions.UseManagedIdentity;
+            });
 
         services.AddDbContext<TransactionDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<ITransactionRepository, TransactionRepository>();
@@ -41,5 +52,37 @@ public static class DependencyInjection
         services.AddSingleton<IRequestHashService, CreateTransactionRequestHashService>();
 
         return services;
+    }
+
+    private static ServiceBusOptions BuildServiceBusOptions(IConfiguration configuration)
+    {
+        var section = configuration.GetSection("ServiceBus");
+
+        var options = new ServiceBusOptions
+        {
+            TopicName = configuration.GetSetting(
+                "ServiceBus:TopicName",
+                "ServiceBus__TopicName",
+                "TopicName") ?? section[nameof(ServiceBusOptions.TopicName)] ?? string.Empty,
+            FullyQualifiedNamespace = configuration.GetSetting(
+                "ServiceBus:FullyQualifiedNamespace",
+                "ServiceBus__FullyQualifiedNamespace") ?? section[nameof(ServiceBusOptions.FullyQualifiedNamespace)],
+            ConnectionString = configuration.GetSetting(
+                "ServiceBus:ConnectionString",
+                "ServiceBus__ConnectionString") ?? section[nameof(ServiceBusOptions.ConnectionString)],
+            UseManagedIdentity = GetBooleanSetting(
+                configuration,
+                defaultValue: true,
+                "ServiceBus:UseManagedIdentity",
+                "ServiceBus__UseManagedIdentity")
+        };
+
+        return options;
+    }
+
+    private static bool GetBooleanSetting(IConfiguration configuration, bool defaultValue, params string[] keys)
+    {
+        var rawValue = configuration.GetSetting(keys);
+        return bool.TryParse(rawValue, out var parsedValue) ? parsedValue : defaultValue;
     }
 }

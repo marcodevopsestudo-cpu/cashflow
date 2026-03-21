@@ -15,8 +15,8 @@ namespace TransactionService.Infrastructure.Messaging;
 /// </summary>
 public sealed class AzureServiceBusEventPublisher : IIntegrationEventPublisher, IAsyncDisposable
 {
-    private readonly ServiceBusClient _client;
-    private readonly ServiceBusSender _sender;
+    private readonly Lazy<ServiceBusClient> _client;
+    private readonly Lazy<ServiceBusSender> _sender;
     private readonly ILogger<AzureServiceBusEventPublisher> _logger;
 
     /// <summary>
@@ -34,18 +34,8 @@ public sealed class AzureServiceBusEventPublisher : IIntegrationEventPublisher, 
             throw new InvalidOperationException(MessageCatalog.ServiceBusTopicRequired);
         }
 
-        if (settings.UseManagedIdentity)
-        {
-            _client = new ServiceBusClient(
-                settings.FullyQualifiedNamespace ?? throw new InvalidOperationException("ServiceBus:FullyQualifiedNamespace is required."),
-                new DefaultAzureCredential());
-        }
-        else
-        {
-            _client = new ServiceBusClient(settings.ConnectionString ?? throw new InvalidOperationException("ServiceBus:ConnectionString is required."));
-        }
-
-        _sender = _client.CreateSender(settings.TopicName);
+        _client = new Lazy<ServiceBusClient>(() => CreateClient(settings));
+        _sender = new Lazy<ServiceBusSender>(() => _client.Value.CreateSender(settings.TopicName));
     }
 
     /// <summary>
@@ -95,7 +85,7 @@ public sealed class AzureServiceBusEventPublisher : IIntegrationEventPublisher, 
             integrationEvent.EventName,
             integrationEvent.EventId);
 
-        await _sender.SendMessageAsync(message, cancellationToken);
+        await _sender.Value.SendMessageAsync(message, cancellationToken);
     }
 
     /// <summary>
@@ -103,7 +93,29 @@ public sealed class AzureServiceBusEventPublisher : IIntegrationEventPublisher, 
     /// </summary>
     public async ValueTask DisposeAsync()
     {
-        await _sender.DisposeAsync();
-        await _client.DisposeAsync();
+        if (_sender.IsValueCreated)
+        {
+            await _sender.Value.DisposeAsync();
+        }
+
+        if (_client.IsValueCreated)
+        {
+            await _client.Value.DisposeAsync();
+        }
+    }
+
+    private static ServiceBusClient CreateClient(ServiceBusOptions settings)
+    {
+        if (settings.UseManagedIdentity)
+        {
+            return new ServiceBusClient(
+                settings.FullyQualifiedNamespace ?? throw new InvalidOperationException(
+                    "ServiceBus namespace not found. Configure ServiceBus__FullyQualifiedNamespace when UseManagedIdentity is true."),
+                new DefaultAzureCredential());
+        }
+
+        return new ServiceBusClient(
+            settings.ConnectionString ?? throw new InvalidOperationException(
+                "Service Bus connection string not found. Configure ServiceBus__ConnectionString when UseManagedIdentity is false."));
     }
 }
