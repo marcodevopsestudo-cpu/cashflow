@@ -71,6 +71,8 @@ module "postgres" {
   backup_retention_days = 7
   zone                  = "1"
   tags                  = local.tags
+  start_ip_address      = var.start_ip_address
+  end_ip_address        = var.end_ip_address
 }
 
 module "key_vault" {
@@ -204,4 +206,10 @@ module "rbac_service_principal_assignment" {
   service_scope         = "/subscriptions/${var.subscription_id}"
 }
 
+module "rbac_key_vault_assignment_principal_github_oidc" {
+  source                = "./modules/role_assignments"
+  principal_id          = module.github_oidc.service_principal_object_id
+  role_definition_name = "Key Vault Secrets User"
+  service_scope         = module.key_vault.id
+}
 
