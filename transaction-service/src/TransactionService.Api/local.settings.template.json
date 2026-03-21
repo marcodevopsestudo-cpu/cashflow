@@ -13,7 +13,7 @@
     "Authorization__Enabled": "true",
     "Authorization__AllowedAppIds__0": "00000000-0000-0000-0000-000000000000",
     "Authorization__RequiredRoles__0": "TransactionService.Access",
-    "Authorization__AllowedAudiences__0": "api://00000000-0000-0000-0000-000000000000",
+    "Authorization__AllowedAudiences__0": "api://00000000-00900-0000-0000-000000000000",
     "Authorization__AllowedIssuers__0": "https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0"
   }
 }
