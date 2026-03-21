@@ -10,7 +10,7 @@
     "ServiceBus__FullyQualifiedNamespace": "sb-example.servicebus.windows.net",
     "ServiceBus__UseManagedIdentity": "false",
     "ServiceBus__ConnectionString": "Endpoint=sb://sb-example.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=replace-me",
-    "Authorization__Enabled": "false",
+    "Authorization__Enabled": "true",
     "Authorization__AllowedAppIds__0": "00000000-0000-0000-0000-000000000000",
     "Authorization__RequiredRoles__0": "TransactionService.Access",
     "Authorization__AllowedAudiences__0": "api://00000000-0000-0000-0000-000000000000",
