@@ -119,11 +119,19 @@ jobs:
       - name: Restore API
         run: dotnet restore ${{ env.API_PROJECT_PATH }}
 
-      - name: Build API
-        run: dotnet build ${{ env.API_PROJECT_PATH }} --configuration Release --no-restore
+      - name: Clean previous publish output
+        shell: bash
+        run: |
+          rm -rf "${{ env.API_PUBLISH_PATH }}"
+          mkdir -p "${{ env.API_PUBLISH_PATH }}"
 
       - name: Publish API
-        run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --no-build --output ${{ env.API_PUBLISH_PATH }}
+        run: >-
+          dotnet publish ${{ env.API_PROJECT_PATH }}
+          --configuration Release
+          --no-restore
+          --output ${{ env.API_PUBLISH_PATH }}
+          /p:UseAppHost=false
 
       - name: Validate publish output
         shell: bash
@@ -133,9 +141,12 @@ jobs:
 
           test -f "${{ env.API_PUBLISH_PATH }}/host.json" || (echo "host.json not found in publish root" && exit 1)
           test -f "${{ env.API_PUBLISH_PATH }}/worker.config.json" || (echo "worker.config.json not found in publish root" && exit 1)
+          test -f "${{ env.API_PUBLISH_PATH }}/functions.metadata" || (echo "functions.metadata not found in publish root" && exit 1)
+          test -f "${{ env.API_PUBLISH_PATH }}/extensions.json" || (echo "extensions.json not found in publish root" && exit 1)
+          test -d "${{ env.API_PUBLISH_PATH }}/bin" || (echo "bin directory not found in publish root" && exit 1)
 
-          echo "=== Optional files check ==="
-          find "${{ env.API_PUBLISH_PATH }}" -maxdepth 1 -type f | sort
+          echo "=== Publish files ==="
+          find "${{ env.API_PUBLISH_PATH }}" -maxdepth 2 | sort
 
           echo "Publish structure validated successfully."
 
