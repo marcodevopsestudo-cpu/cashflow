@@ -86,13 +86,31 @@ module "key_vault" {
 }
 
 module "entra_api" {
-  source                         = "./modules/entra_api_app"
-  display_name                   = "api-${local.prefix}-transaction-service"
-  identifier_uri                 = "api://api-${local.prefix}-transaction-service"
-  app_role_display_name          = "Transaction Service Access"
-  app_role_value                 = "TransactionService.Access"
+  source = "./modules/entra_api_app"
+
+  display_name                   = "api-cashflow-dev-transaction-service"
+  identifier_uri                 = "api://api-cashflow-dev-transaction-service"
   requested_access_token_version = 2
+
+  scope_value                         = "access_as_user"
+  scope_admin_consent_display_name    = "Access transaction service"
+  scope_admin_consent_description     = "Allows the application to access transaction service on behalf of the signed-in user."
+  scope_user_consent_display_name     = "Access transaction service"
+  scope_user_consent_description      = "Allow this application to access transaction service on your behalf."
+
+  app_role_display_name = "Transaction Service Access"
+  app_role_value        = "TransactionService.Access"
 }
+
+module "entra_postman_client_app" {
+  source = "./modules/entra_postman_client_app"
+
+  display_name = "cashflow-postman-client"
+
+  api_client_id = module.entra_api.client_id
+  api_scope_id  = module.entra_api.oauth2_scope_id
+}
+
 
 module "github_oidc" {
   source          = "./modules/github_oidc_app"

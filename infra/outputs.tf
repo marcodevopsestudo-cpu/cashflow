@@ -53,3 +53,20 @@ output "github_oidc_tenant_id" {
 output "github_oidc_subscription_id" {
   value = var.subscription_id
 }
+
+output "entra_api_identifier_uri" {
+  value = module.entra_api.identifier_uri
+}
+
+output "entra_api_scope_value" {
+  value = module.entra_api.oauth2_scope_value
+}
+
+output "postman_client_id" {
+  value = module.entra_postman_client_app.client_id
+}
+
+output "postman_client_secret" {
+  value     = module.entra_postman_client_app.client_secret
+  sensitive = true
+}

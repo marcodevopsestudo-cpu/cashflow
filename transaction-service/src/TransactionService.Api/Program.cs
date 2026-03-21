@@ -15,7 +15,7 @@ var host = new HostBuilder()
               .AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true, reloadOnChange: true)
               .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
               .AddEnvironmentVariables();
-    }).ConfigureFunctionsWorkerDefaults(worker =>
+    }).ConfigureFunctionsWebApplication(worker =>
     {
         worker.UseMiddleware<ExceptionHandlingMiddleware>();
         worker.UseMiddleware<CorrelationIdMiddleware>();
