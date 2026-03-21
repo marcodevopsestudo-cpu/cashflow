@@ -139,11 +139,11 @@ jobs:
           echo "=== Publish root ==="
           ls -la ${{ env.API_PUBLISH_PATH }}
 
-          test -f "${{ env.API_PUBLISH_PATH }}/host.json" || (echo "host.json not found in publish root" && exit 1)
-          test -f "${{ env.API_PUBLISH_PATH }}/worker.config.json" || (echo "worker.config.json not found in publish root" && exit 1)
-          test -f "${{ env.API_PUBLISH_PATH }}/functions.metadata" || (echo "functions.metadata not found in publish root" && exit 1)
-          test -f "${{ env.API_PUBLISH_PATH }}/extensions.json" || (echo "extensions.json not found in publish root" && exit 1)
-          test -d "${{ env.API_PUBLISH_PATH }}/bin" || (echo "bin directory not found in publish root" && exit 1)
+          test -f "${{ env.API_PUBLISH_PATH }}/host.json" || exit 1
+          test -f "${{ env.API_PUBLISH_PATH }}/worker.config.json" || exit 1
+          test -f "${{ env.API_PUBLISH_PATH }}/functions.metadata" || exit 1
+          test -f "${{ env.API_PUBLISH_PATH }}/extensions.json" || exit 1
+          test -f "${{ env.API_PUBLISH_PATH }}/TransactionService.Api.dll" || exit 1
 
           echo "=== Publish files ==="
           find "${{ env.API_PUBLISH_PATH }}" -maxdepth 2 | sort
