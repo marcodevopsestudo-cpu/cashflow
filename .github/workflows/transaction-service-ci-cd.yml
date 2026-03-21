@@ -21,7 +21,7 @@ permissions:
 env:
   AZURE_FUNCTIONAPP_NAME: func-cashflow-dev-tx
   API_PROJECT_PATH: ./transaction-service/src/TransactionService.Api
-  API_PUBLISH_PATH: ./transaction-service/publish
+  API_PUBLISH_PATH: ./publish # 🔥 CORRIGIDO
   TEST_WORKING_DIR: ./transaction-service
   DB_MIGRATOR_PROJECT_PATH: ./db-migrator
   MIGRATIONS_PATH: ./transaction-service/scripts
@@ -118,6 +118,10 @@ jobs:
 
       - name: Publish API
         run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --output ${{ env.API_PUBLISH_PATH }}
+
+      # 🔍 DEBUG (ESSENCIAL PRA VALIDAR)
+      - name: List publish output
+        run: ls -la ${{ env.API_PUBLISH_PATH }}
 
       - name: Azure login with OIDC
         uses: azure/login@v2

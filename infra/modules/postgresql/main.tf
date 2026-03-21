@@ -18,3 +18,17 @@ resource "azurerm_postgresql_flexible_server_database" "app" {
   collation = "en_US.utf8"
   charset   = "UTF8"
 }
+
+
+resource "azurerm_postgresql_flexible_server_firewall_rule" "allow_azure_ci" {
+  name             = "allow-azure-services-ci"
+  server_id        = azurerm_postgresql_flexible_server.this.id
+  start_ip_address = var.start_ip_address
+  end_ip_address   = var.end_ip_address
+}
+
+resource "azurerm_postgresql_flexible_server_configuration" "extensions" {
+  name      = "azure.extensions"
+  server_id = azurerm_postgresql_flexible_server.this.id
+  value     = "uuid-ossp"
+}
