@@ -82,10 +82,7 @@ jobs:
       - name: Read Postgres connection string from Key Vault
         shell: bash
         run: |
-          CONNECTION_STRING=$(az keyvault secret show \
-            --vault-name "$KEY_VAULT_NAME" \
-            --name "$POSTGRES_SECRET_NAME" \
-            --query value -o tsv)
+          CONNECTION_STRING=$(az keyvault secret show             --vault-name "$KEY_VAULT_NAME"             --name "$POSTGRES_SECRET_NAME"             --query value -o tsv)
 
           if [ -z "$CONNECTION_STRING" ]; then
             echo "Postgres connection string secret was not found or is empty."
@@ -132,23 +129,45 @@ jobs:
           --no-restore
           --output ${{ env.API_PUBLISH_PATH }}
           /p:UseAppHost=false
+          /p:GenerateFunctionsMetadata=true
+
+      - name: Inspect publish output deeply
+        shell: bash
+        run: |
+          echo "================ ROOT ================="
+          ls -la "${{ env.API_PUBLISH_PATH }}"
+
+          echo "================ FUNCTIONS METADATA ================="
+          if [ -f "${{ env.API_PUBLISH_PATH }}/functions.metadata" ]; then
+            cat "${{ env.API_PUBLISH_PATH }}/functions.metadata"
+          else
+            echo "functions.metadata NOT FOUND"
+            exit 1
+          fi
+
+          echo "================ HOST JSON ================="
+          cat "${{ env.API_PUBLISH_PATH }}/host.json" || true
+
+          echo "================ EXTENSIONS ================="
+          cat "${{ env.API_PUBLISH_PATH }}/extensions.json" || true
+
+          echo "================ DLL CHECK ================="
+          ls "${{ env.API_PUBLISH_PATH }}"/*.dll || true
 
       - name: Validate publish output
         shell: bash
         run: |
-          echo "=== Publish root ==="
-          ls -la ${{ env.API_PUBLISH_PATH }}
+          test -f "${{ env.API_PUBLISH_PATH }}/host.json" || (echo "host.json not found" && exit 1)
+          test -f "${{ env.API_PUBLISH_PATH }}/worker.config.json" || (echo "worker.config.json not found" && exit 1)
+          test -f "${{ env.API_PUBLISH_PATH }}/functions.metadata" || (echo "functions.metadata not found" && exit 1)
+          test -f "${{ env.API_PUBLISH_PATH }}/extensions.json" || (echo "extensions.json not found" && exit 1)
+          test -f "${{ env.API_PUBLISH_PATH }}/TransactionService.Api.dll" || (echo "TransactionService.Api.dll not found" && exit 1)
 
-          test -f "${{ env.API_PUBLISH_PATH }}/host.json" || exit 1
-          test -f "${{ env.API_PUBLISH_PATH }}/worker.config.json" || exit 1
-          test -f "${{ env.API_PUBLISH_PATH }}/functions.metadata" || exit 1
-          test -f "${{ env.API_PUBLISH_PATH }}/extensions.json" || exit 1
-          test -f "${{ env.API_PUBLISH_PATH }}/TransactionService.Api.dll" || exit 1
+          echo "================ FUNCTION NAMES CHECK ================="
+          grep -q "CreateTransactionFunction" "${{ env.API_PUBLISH_PATH }}/functions.metadata" || (echo "CreateTransactionFunction not found in functions.metadata" && exit 1)
+          grep -q "PingFunction" "${{ env.API_PUBLISH_PATH }}/functions.metadata" || (echo "PingFunction not found in functions.metadata" && exit 1)
 
-          echo "=== Publish files ==="
-          find "${{ env.API_PUBLISH_PATH }}" -maxdepth 2 | sort
-
-          echo "Publish structure validated successfully."
+          echo "Publish structure and function metadata validated successfully."
 
       - name: Upload publish artifact
         uses: actions/upload-artifact@v4
