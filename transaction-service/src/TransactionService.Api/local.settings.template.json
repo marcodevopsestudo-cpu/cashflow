@@ -8,7 +8,7 @@
     "ConnectionStrings__Postgres": "Host=localhost;Port=5432;Database=transactiondb;Username=postgres;Password=postgres",
     "ServiceBus__TopicName": "transaction-events",
     "ServiceBus__FullyQualifiedNamespace": "sb-example.servicebus.windows.net",
-    "ServiceBus__UseManagedIdentity": "false",
+    "ServiceBus__UseManagedIdentity": "true",
     "ServiceBus__ConnectionString": "Endpoint=sb://sb-example.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=replace-me",
     "Authorization__Enabled": "true",
     "Authorization__AllowedAppIds__0": "00000000-0000-0000-0000-000000000000",
