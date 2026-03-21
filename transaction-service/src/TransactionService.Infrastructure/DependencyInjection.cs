@@ -26,8 +26,8 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("Postgres")
-            ?? configuration["ConnectionStrings:Postgres"]
-            ?? throw new InvalidOperationException("ConnectionStrings:Postgres was not configured.");
+            ?? configuration["ConnectionStrings__Postgres"]
+            ?? throw new InvalidOperationException("ConnectionStrings__Postgres was not configured.");
 
         services.Configure<ServiceBusOptions>(configuration.GetSection("ServiceBus"));
 
