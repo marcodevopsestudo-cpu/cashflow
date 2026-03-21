@@ -4,3 +4,8 @@ output "primary_access_key" {
   value     = azurerm_storage_account.this.primary_access_key
   sensitive = true
 }
+
+output "primary_connection_string" {
+  value =  azurerm_storage_account.this.primary_connection_string
+  sensitive = true
+}

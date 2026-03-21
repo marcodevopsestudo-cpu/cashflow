@@ -28,9 +28,5 @@ variable "container_name" {
 
 variable "tags" {
   type = map(string)
-  default = {
-    project    = "cashflow"
-    managed_by = "terraform"
-    purpose    = "tfstate"
-  }
+
 }

@@ -14,14 +14,14 @@ locals {
 }
 
 module "rg" {
-  source   = "../../modules/resource_group"
+  source   = "./modules/resource_group"
   name     = "rg-${local.prefix}"
   location = var.location
   tags     = local.tags
 }
 
 module "storage" {
-  source              = "../../modules/storage_account"
+  source              = "./modules/storage_account"
   resource_group_name = module.rg.name
   location            = module.rg.location
   project_name        = var.project_name
@@ -30,7 +30,7 @@ module "storage" {
 }
 
 module "plan" {
-  source              = "../../modules/app_service_plan"
+  source              = "./modules/app_service_plan"
   name                = "asp-${local.prefix}"
   resource_group_name = module.rg.name
   location            = module.rg.location
@@ -40,7 +40,7 @@ module "plan" {
 }
 
 module "appinsights" {
-  source              = "../../modules/application_insights"
+  source              = "./modules/application_insights"
   name                = "appi-${local.prefix}"
   resource_group_name = module.rg.name
   location            = module.rg.location
@@ -49,7 +49,7 @@ module "appinsights" {
 }
 
 module "service_bus" {
-  source              = "../../modules/service_bus"
+  source              = "./modules/service_bus"
   name                = substr("sb${local.compact_prefix}", 0, 50)
   topic_name          = var.servicebus_topic_name
   resource_group_name = module.rg.name
@@ -58,7 +58,7 @@ module "service_bus" {
 }
 
 module "postgres" {
-  source                = "../../modules/postgresql"
+  source                = "./modules/postgresql"
   name                  = substr("psql-${local.prefix}", 0, 63)
   database_name         = "cashflow"
   resource_group_name   = module.rg.name
@@ -74,7 +74,7 @@ module "postgres" {
 }
 
 module "key_vault" {
-  source                      = "../../modules/key_vault"
+  source                      = "./modules/key_vault"
   name                        = substr("kv-${local.prefix}", 0, 24)
   resource_group_name         = module.rg.name
   location                    = module.rg.location
@@ -84,7 +84,7 @@ module "key_vault" {
 }
 
 module "entra_api" {
-  source                         = "../../modules/entra_api_app"
+  source                         = "./modules/entra_api_app"
   display_name                   = "api-${local.prefix}-transaction-service"
   identifier_uri                 = "api://api-${local.prefix}-transaction-service"
   app_role_display_name          = "Transaction Service Access"
@@ -93,7 +93,7 @@ module "entra_api" {
 }
 
 module "github_oidc" {
-  source          = "../../modules/github_oidc_app"
+  source          = "./modules/github_oidc_app"
   display_name    = "gh-${local.prefix}-deploy"
   github_owner    = var.github_owner
   github_repo     = var.github_repo
@@ -118,7 +118,7 @@ resource "azurerm_key_vault_secret" "servicebus_connection_string" {
 }
 
 module "function" {
-  source                                 = "../../modules/function_app"
+  source                                 = "./modules/function_app"
   name                                   = local.function_name
   resource_group_name                    = module.rg.name
   location                               = module.rg.location
@@ -126,25 +126,51 @@ module "function" {
   storage_account_name                   = module.storage.name
   storage_account_access_key             = module.storage.primary_access_key
   application_insights_connection_string = module.appinsights.connection_string
+
   app_settings = {
-    FUNCTIONS_WORKER_RUNTIME              = "dotnet-isolated"
-    FUNCTIONS_EXTENSION_VERSION           = "~4"
-    ASPNETCORE_ENVIRONMENT                = var.environment
-    SERVICEBUS__TOPICNAME                 = module.service_bus.topic_name
-    SERVICEBUS__FULLYQUALIFIEDNAMESPACE   = module.service_bus.namespace_fqdn
-    ConnectionStrings__Postgres           = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.postgres_connection_string.versionless_id})"
-    ConnectionStrings__ServiceBus         = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.servicebus_connection_string.versionless_id})"
+    # Core
+    FUNCTIONS_WORKER_RUNTIME    = "dotnet-isolated"
+    FUNCTIONS_EXTENSION_VERSION = "~4"
+    ASPNETCORE_ENVIRONMENT      = var.environment
+
+    # REQUIRED
+    AzureWebJobsStorage = module.storage.primary_connection_string
+
+    # Service Bus
+    ServiceBus__TopicName               = module.service_bus.topic_name
+    ServiceBus__FullyQualifiedNamespace = module.service_bus.namespace_fqdn
+    ServiceBus__UseManagedIdentity      = "true"
+
+    # (fallback opcional - igual seu local)
+    ServiceBus__ConnectionString = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.servicebus_connection_string.versionless_id})"
+
+    # Database
+    ConnectionStrings__Postgres = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.postgres_connection_string.versionless_id})"
+
+    # Auth config (igual seu local)
+    Authorization__Enabled                = "true"
+    Authorization__AllowedAppIds__0       = module.entra_api.client_id
+    Authorization__RequiredRoles__0       = "TransactionService.Access"
+    Authorization__AllowedAudiences__0    = "api://${module.entra_api.client_id}"
+    Authorization__AllowedIssuers__0      = "https://login.microsoftonline.com/${var.tenant_id}/v2.0"
+
+    # Observabilidade
     APPLICATIONINSIGHTS_CONNECTION_STRING = module.appinsights.connection_string
-    AzureWebJobsFeatureFlags              = "EnableWorkerIndexing"
+
+    # Feature flags
+    AzureWebJobsFeatureFlags = "EnableWorkerIndexing"
   }
+
   auth_settings = {
     enabled                = true
     client_id              = module.entra_api.client_id
     tenant_auth_endpoint   = "https://login.microsoftonline.com/${var.tenant_id}/v2.0"
     unauthenticated_action = "Return401"
   }
+
   key_vault_reference_identity_id = null
-  tags                            = local.tags
+
+  tags = local.tags
 
   depends_on = [
     azurerm_key_vault_secret.postgres_connection_string,
@@ -152,20 +178,10 @@ module "function" {
   ]
 }
 
-resource "azurerm_key_vault_access_policy" "function_secrets_read" {
-  key_vault_id = module.key_vault.id
-  tenant_id    = var.tenant_id
-  object_id    = module.function.principal_id
-
-  secret_permissions = [
-    "Get",
-    "List"
-  ]
-}
-
 module "rbac" {
-  source            = "../../modules/role_assignments"
+  source            = "./modules/role_assignments"
   principal_id      = module.function.principal_id
+  key_vault_scope   = module.key_vault.id
   service_bus_scope = module.service_bus.id
   storage_scope     = module.storage.id
 }
