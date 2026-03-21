@@ -3,12 +3,18 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TransactionService.Api.Configuration;
-using TransactionService.Api.Middlewares;
 using TransactionService.Api.Security;
 using TransactionService.Application;
 using TransactionService.Infrastructure;
 
 var host = new HostBuilder()
+    .ConfigureAppConfiguration((context, config) =>
+    {
+        config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+              .AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+              .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
+              .AddEnvironmentVariables();
+    })
     //.ConfigureFunctionsWorkerDefaults(worker =>
     //{
     //    //worker.UseMiddleware<ExceptionHandlingMiddleware>();

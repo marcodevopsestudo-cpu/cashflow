@@ -26,10 +26,17 @@ public static class DependencyInjection
     /// <returns>The updated service collection.</returns>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Postgres")
-            ?? configuration.GetSetting("ConnectionStrings:Postgres", "ConnectionStrings__Postgres")
-            ?? throw new InvalidOperationException(
+        var connectionString =
+       configuration.GetConnectionString("Postgres") ??
+       configuration["ConnectionStrings__Postgres"] ??
+       configuration["ConnectionStrings:Postgres"];
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
                 "Postgres connection string not found. Configure ConnectionStrings__Postgres.");
+        }
+
 
         var serviceBusOptions = BuildServiceBusOptions(configuration);
 
