@@ -9,13 +9,13 @@ using TransactionService.Application;
 using TransactionService.Infrastructure;
 
 var host = new HostBuilder()
-    .ConfigureFunctionsWorkerDefaults(worker =>
-    {
-        worker.UseMiddleware<ExceptionHandlingMiddleware>();
-        worker.UseMiddleware<CorrelationIdMiddleware>();
-        worker.UseMiddleware<IdempotencyKeyMiddleware>();
-        worker.UseMiddleware<EntraAuthorizationMiddleware>();
-    })
+    //.ConfigureFunctionsWorkerDefaults(worker =>
+    //{
+    //    //worker.UseMiddleware<ExceptionHandlingMiddleware>();
+    //    //worker.UseMiddleware<CorrelationIdMiddleware>();
+    //    //worker.UseMiddleware<IdempotencyKeyMiddleware>();
+    //    //worker.UseMiddleware<EntraAuthorizationMiddleware>();
+    //})
     .ConfigureServices((context, services) =>
     {
         services.AddApplication();
