@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>ConsolidationService.Domain</AssemblyName>
+    <RootNamespace>ConsolidationService.Domain</RootNamespace>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "ServiceBusConnection": "Endpoint=sb://your-namespace.servicebus.windows.net/;SharedAccessKeyName=...;SharedAccessKey=...",
+    "ServiceBusTopicName": "daily-consolidation",
+    "ServiceBusSubscriptionName": "consolidation-service",
+    "Postgres:ConnectionString": "Host=localhost;Port=5432;Database=challenge;Username=postgres;Password=postgres",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": "InstrumentationKey=..."
+  }
+}
