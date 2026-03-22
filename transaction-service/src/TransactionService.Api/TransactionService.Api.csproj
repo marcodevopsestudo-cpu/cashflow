@@ -6,8 +6,9 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+		<FunctionsEnableWorkerIndexing>false</FunctionsEnableWorkerIndexing>
 	</PropertyGroup>
-
+	
 	<ItemGroup>
 		<None Include="local.settings.json">
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
