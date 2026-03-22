@@ -162,11 +162,12 @@ module "function" {
     ConnectionStrings__Postgres           = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.postgres_connection_string.versionless_id})"
     Authorization__Enabled                = "true"
     Authorization__AllowedAppIds__0       = module.entra_postman_client_app.client_id
-    Authorization__AllowedAudiences__0    = "api://${module.entra_api.client_id}"
+    Authorization__AllowedAudiences__0    = module.entra_api.client_id
+    Authorization__AllowedAudiences__1    = "api://${module.entra_api.client_id}"
     Authorization__AllowedIssuers__0      = "https://login.microsoftonline.com/${var.tenant_id}/v2.0"
     Authorization__RequiredScopes__0      = "access_as_user"
     APPLICATIONINSIGHTS_CONNECTION_STRING = module.appinsights.connection_string
-    AzureWebJobsFeatureFlags              = "EnableWorkerIndexing"
+    # AzureWebJobsFeatureFlags              = "EnableWorkerIndexing"
 
 
   }
