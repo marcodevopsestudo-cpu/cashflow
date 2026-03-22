@@ -12,13 +12,21 @@ using Xunit;
 namespace TransactionService.UnitTests;
 
 /// <summary>
-/// Contains unit tests for the transaction creation handler.
+/// Unit tests for <see cref="CreateTransactionCommandHandler"/>.
 /// </summary>
 public sealed class CreateTransactionCommandHandlerTests
 {
+    /// <summary>
+    /// Verifies that on first execution the handler persists:
+    /// - transaction
+    /// - outbox message
+    /// - idempotency entry
+    /// and commits the unit of work.
+    /// </summary>
     [Fact]
     public async Task Handle_ShouldPersistTransactionOutboxAndIdempotency_OnFirstExecution()
     {
+        // Arrange
         var repository = new Mock<ITransactionRepository>();
         var outboxRepository = new Mock<IOutboxRepository>();
         var idempotencyRepository = new Mock<IIdempotencyRepository>();
@@ -41,6 +49,7 @@ public sealed class CreateTransactionCommandHandlerTests
             unitOfWork.Object,
             NullLogger<CreateTransactionCommandHandler>.Instance);
 
+        // Act
         var result = await handler.Handle(new CreateTransactionCommand(
             "ACC-001",
             "Credit",
@@ -51,20 +60,35 @@ public sealed class CreateTransactionCommandHandlerTests
             "corr-1",
             "idem-1"), CancellationToken.None);
 
+        // Assert
         result.IsIdempotentReplay.Should().BeFalse();
         result.Transaction.AccountId.Should().Be("ACC-001");
         result.Transaction.Status.Should().Be("Received");
 
-        idempotencyRepository.Verify(x => x.AddAsync(It.IsAny<IdempotencyEntry>(), It.IsAny<CancellationToken>()), Times.Once);
-        idempotencyRepository.Verify(x => x.UpdateAsync(It.IsAny<IdempotencyEntry>(), It.IsAny<CancellationToken>()), Times.Once);
-        repository.Verify(x => x.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()), Times.Once);
-        outboxRepository.Verify(x => x.AddAsync(It.IsAny<OutboxMessage>(), It.IsAny<CancellationToken>()), Times.Once);
-        unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        idempotencyRepository.Verify(x =>
+            x.AddAsync(It.IsAny<IdempotencyEntry>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        idempotencyRepository.Verify(x =>
+            x.UpdateAsync(It.IsAny<IdempotencyEntry>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        repository.Verify(x =>
+            x.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        outboxRepository.Verify(x =>
+            x.AddAsync(It.IsAny<OutboxMessage>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        unitOfWork.Verify(x =>
+            x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// Verifies that when the same idempotency key and payload are used,
+    /// the handler returns a replay instead of creating new data.
+    /// </summary>
     [Fact]
     public async Task Handle_ShouldReturnReplay_WhenIdempotencyEntryAlreadyExistsWithSamePayload()
     {
+        // Arrange
         var repository = new Mock<ITransactionRepository>();
         var outboxRepository = new Mock<IOutboxRepository>();
         var idempotencyRepository = new Mock<IIdempotencyRepository>();
@@ -73,7 +97,7 @@ public sealed class CreateTransactionCommandHandlerTests
 
         var persistedTransaction = Transaction.Create(
             "ACC-001",
-           TransactionKind.Credit,
+            TransactionKind.Credit,
             100,
             "BRL",
             DateTime.UtcNow,
@@ -103,6 +127,7 @@ public sealed class CreateTransactionCommandHandlerTests
             unitOfWork.Object,
             NullLogger<CreateTransactionCommandHandler>.Instance);
 
+        // Act
         var result = await handler.Handle(new CreateTransactionCommand(
             "ACC-001",
             "Credit",
@@ -113,6 +138,7 @@ public sealed class CreateTransactionCommandHandlerTests
             "corr-retry",
             "idem-1"), CancellationToken.None);
 
+        // Assert
         result.IsIdempotentReplay.Should().BeTrue();
         result.Transaction.TransactionId.Should().Be(persistedTransaction.Id);
         result.Transaction.CorrelationId.Should().Be("corr-original");
@@ -122,9 +148,14 @@ public sealed class CreateTransactionCommandHandlerTests
         unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>
+    /// Verifies that reusing an idempotency key with a different payload
+    /// results in a conflict exception.
+    /// </summary>
     [Fact]
     public async Task Handle_ShouldThrowConflict_WhenIdempotencyKeyIsReusedWithDifferentPayload()
     {
+        // Arrange
         var repository = new Mock<ITransactionRepository>();
         var outboxRepository = new Mock<IOutboxRepository>();
         var idempotencyRepository = new Mock<IIdempotencyRepository>();
@@ -150,6 +181,7 @@ public sealed class CreateTransactionCommandHandlerTests
             unitOfWork.Object,
             NullLogger<CreateTransactionCommandHandler>.Instance);
 
+        // Act
         var act = async () => await handler.Handle(new CreateTransactionCommand(
             "ACC-001",
             "Credit",
@@ -160,6 +192,7 @@ public sealed class CreateTransactionCommandHandlerTests
             "corr-1",
             "idem-1"), CancellationToken.None);
 
+        // Assert
         await act.Should().ThrowAsync<IdempotencyConflictApplicationException>();
     }
 }

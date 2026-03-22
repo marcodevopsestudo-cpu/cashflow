@@ -7,9 +7,7 @@ namespace TransactionService.Domain.Entities;
 /// </summary>
 public sealed class Transaction
 {
-    private Transaction()
-    {
-    }
+   
 
     /// <summary>
     /// Gets the transaction identifier.

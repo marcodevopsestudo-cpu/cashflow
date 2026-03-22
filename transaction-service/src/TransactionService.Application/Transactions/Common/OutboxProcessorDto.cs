@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+namespace TransactionService.Application.Transactions.Common;
 
-namespace TransactionService.Application.Transactions.Common
-{
-    public sealed record OutboxProcessorDto(
-        int processedItems
-    );
-}
-    
+/// <summary>
+/// Represents the result of an outbox processing operation.
+/// </summary>
+/// <param name="ProcessedItems">
+/// The number of items successfully processed during the operation.
+/// </param>
+public sealed record OutboxProcessorDto(
+    int ProcessedItems
+);
