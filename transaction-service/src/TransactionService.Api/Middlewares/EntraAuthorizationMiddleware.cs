@@ -40,6 +40,7 @@ public sealed class EntraAuthorizationMiddleware : IFunctionsWorkerMiddleware
         }
 
         var principal = CallerPrincipalParser.Parse(request);
+
         var decision = _evaluator.Evaluate(principal, _options.Value);
         var correlationId = context.GetCorrelationId();
 
