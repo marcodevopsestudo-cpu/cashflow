@@ -1,7 +1,6 @@
 using ConsolidationService.Application.Abstractions;
 using ConsolidationService.Application.Commands.ProcessConsolidationBatch;
 using ConsolidationService.Application.Contracts;
-using ConsolidationService.Application.Telemetry;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -9,14 +8,23 @@ using Xunit;
 
 namespace ConsolidationService.Application.Tests.Commands;
 
+/// <summary>
+/// Unit tests for <see cref="ProcessConsolidationBatchCommandHandler"/>.
+/// </summary>
 public sealed class ProcessConsolidationBatchCommandHandlerTests
 {
+    /// <summary>
+    /// Ensures that the handler delegates the request to the workflow with the correct parameters.
+    /// </summary>
     [Fact]
-    public async Task Should_forward_request_to_workflow_and_set_telemetry_context()
+    public async Task Should_forward_request_to_workflow()
     {
+        // Arrange
         var workflow = Substitute.For<IConsolidationWorkflow>();
-        var telemetry = new TelemetryContextAccessor();
-        var handler = new ProcessConsolidationBatchCommandHandler(workflow, telemetry, NullLogger<ProcessConsolidationBatchCommandHandler>.Instance);
+
+        var handler = new ProcessConsolidationBatchCommandHandler(
+            workflow,
+            NullLogger<ProcessConsolidationBatchCommandHandler>.Instance);
 
         var message = new ConsolidationBatchMessage
         {
@@ -26,11 +34,13 @@ public sealed class ProcessConsolidationBatchCommandHandlerTests
             TransactionIds = new[] { 10L, 11L }
         };
 
-        await handler.Handle(new ProcessConsolidationBatchCommand(message, "msg-002"), CancellationToken.None);
+        var command = new ProcessConsolidationBatchCommand(message, "msg-002");
 
-        telemetry.CorrelationId.Should().Be("corr-002");
-        telemetry.BatchId.Should().Be(message.BatchId);
-        telemetry.MessageId.Should().Be("msg-002");
-        await workflow.Received(1).ExecuteAsync(message, "msg-002", CancellationToken.None);
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await workflow.Received(1)
+            .ExecuteAsync(message, CancellationToken.None);
     }
 }

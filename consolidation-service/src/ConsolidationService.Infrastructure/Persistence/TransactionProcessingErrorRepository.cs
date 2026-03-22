@@ -6,17 +6,36 @@ using Dapper;
 namespace ConsolidationService.Infrastructure.Persistence;
 
 /// <summary>
-/// Persists manual-review errors for batches or transactions.
+/// Provides PostgreSQL persistence operations for transaction processing errors
+/// that require manual review.
 /// </summary>
 public sealed class TransactionProcessingErrorRepository : ITransactionProcessingErrorRepository
 {
     private readonly NpgsqlConnectionFactory _connectionFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TransactionProcessingErrorRepository"/> class.
+    /// </summary>
+    /// <param name="connectionFactory">
+    /// Factory used to create PostgreSQL connections for repository operations.
+    /// </param>
     public TransactionProcessingErrorRepository(NpgsqlConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory;
     }
 
+    /// <summary>
+    /// Inserts transaction or batch processing errors into the persistence store.
+    /// </summary>
+    /// <param name="items">
+    /// The collection of processing errors to be persisted.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Token used to cancel the operation.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> that represents the asynchronous insert operation.
+    /// </returns>
     public async Task InsertAsync(IReadOnlyCollection<TransactionProcessingError> items, CancellationToken cancellationToken)
     {
         const string sql = """
@@ -46,7 +65,17 @@ public sealed class TransactionProcessingErrorRepository : ITransactionProcessin
             );
             """;
 
+        if (items.Count == 0)
+        {
+            return;
+        }
+
         await using var connection = _connectionFactory.Create();
-        await connection.ExecuteAsync(new CommandDefinition(sql, items.ToArray(), cancellationToken: cancellationToken));
+
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                sql,
+                items,
+                cancellationToken: cancellationToken));
     }
 }

@@ -1,4 +1,4 @@
-using ConsolidationService.Application.Abstractions;
+using ConsolidationService.Application.Messages.Logs;
 using ConsolidationService.Application.Models;
 using ConsolidationService.Domain.Enums;
 using ConsolidationService.Domain.ValueObjects;
@@ -7,30 +7,52 @@ using Microsoft.Extensions.Logging;
 namespace ConsolidationService.Application.Steps;
 
 /// <summary>
-/// Aggregates credit and debit totals by balance date.
+/// Aggregates transaction amounts by balance date, producing daily credit and debit totals.
 /// </summary>
-public sealed class AggregateTransactionsStep : IConsolidationWorkflowStep
+public sealed class AggregateTransactionsStep
 {
     private readonly ILogger<AggregateTransactionsStep> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AggregateTransactionsStep"/> class.
+    /// </summary>
+    /// <param name="logger">
+    /// The logger used to record structured information about transaction aggregation.
+    /// </param>
     public AggregateTransactionsStep(ILogger<AggregateTransactionsStep> logger)
     {
         _logger = logger;
     }
 
+    /// <summary>
+    /// Aggregates the transactions available in the execution context by balance date.
+    /// </summary>
+    /// <param name="context">
+    /// The workflow execution context containing the transactions to be aggregated.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Token used to cancel the operation.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> that represents the completion of the aggregation step.
+    /// </returns>
+    /// <remarks>
+    /// For each balance date, this step calculates the total credited amount and the total
+    /// debited amount, storing the resulting aggregates in the execution context.
+    /// </remarks>
     public Task ExecuteAsync(BatchExecutionContext context, CancellationToken cancellationToken)
     {
         context.Aggregates = context.Transactions
-            .GroupBy(x => x.BalanceDate)
+            .GroupBy(transaction => transaction.BalanceDate)
             .Select(group => new DailyAggregate(
                 group.Key,
-                group.Where(x => x.Type == TransactionType.Credit).Sum(x => x.Amount),
-                group.Where(x => x.Type == TransactionType.Debit).Sum(x => x.Amount)))
-            .OrderBy(x => x.BalanceDate)
+                group.Where(transaction => transaction.Type == TransactionType.Credit).Sum(transaction => transaction.Amount),
+                group.Where(transaction => transaction.Type == TransactionType.Debit).Sum(transaction => transaction.Amount)))
+            .OrderBy(aggregate => aggregate.BalanceDate)
             .ToArray();
 
         _logger.LogInformation(
-            "Aggregated batch transactions by date. BatchId: {BatchId}, AggregateCount: {AggregateCount}",
+            BatchLogMessages.Workflow.AggregatedTransactions,
             context.Message.BatchId,
             context.Aggregates.Count);
 

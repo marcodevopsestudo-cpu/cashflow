@@ -7,5 +7,11 @@ namespace ConsolidationService.Application.Abstractions;
 /// </summary>
 public interface IDailyBalanceRepository
 {
+    /// <summary>
+    /// upsert a daily consolidation item
+    /// </summary>
+    /// <param name="aggregates"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     Task UpsertAsync(IReadOnlyCollection<DailyAggregate> aggregates, CancellationToken cancellationToken);
 }

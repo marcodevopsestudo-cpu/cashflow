@@ -7,18 +7,38 @@ using Dapper;
 namespace ConsolidationService.Infrastructure.Persistence;
 
 /// <summary>
-/// Implements transaction persistence operations against PostgreSQL.
+/// Provides PostgreSQL persistence operations for transaction retrieval and state transitions.
 /// </summary>
 public sealed class TransactionRepository : ITransactionRepository
 {
     private readonly NpgsqlConnectionFactory _connectionFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TransactionRepository"/> class.
+    /// </summary>
+    /// <param name="connectionFactory">
+    /// Factory used to create PostgreSQL connections for repository operations.
+    /// </param>
     public TransactionRepository(NpgsqlConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<IReadOnlyCollection<Transaction>> GetPendingByIdsAsync(IReadOnlyCollection<long> transactionIds, CancellationToken cancellationToken)
+    /// <summary>
+    /// Retrieves pending transactions filtered by the specified identifiers.
+    /// </summary>
+    /// <param name="transactionIds">
+    /// The collection of transaction identifiers to retrieve.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Token used to cancel the operation.
+    /// </param>
+    /// <returns>
+    /// A read-only collection containing the pending transactions found for the specified identifiers.
+    /// </returns>
+    public async Task<IReadOnlyCollection<Transaction>> GetPendingByIdsAsync(
+        IReadOnlyCollection<long> transactionIds,
+        CancellationToken cancellationToken)
     {
         const string sql = """
             select
@@ -36,6 +56,7 @@ public sealed class TransactionRepository : ITransactionRepository
             """;
 
         await using var connection = _connectionFactory.Create();
+
         var command = new CommandDefinition(
             sql,
             new
@@ -46,10 +67,33 @@ public sealed class TransactionRepository : ITransactionRepository
             cancellationToken: cancellationToken);
 
         var result = await connection.QueryAsync<Transaction>(command);
+
         return result.ToArray();
     }
 
-    public async Task MarkAsConsolidatedAsync(IReadOnlyCollection<long> transactionIds, Guid batchId, DateTime consolidatedAtUtc, CancellationToken cancellationToken)
+    /// <summary>
+    /// Marks the specified transactions as successfully consolidated.
+    /// </summary>
+    /// <param name="transactionIds">
+    /// The collection of transaction identifiers to update.
+    /// </param>
+    /// <param name="batchId">
+    /// The identifier of the batch responsible for the consolidation.
+    /// </param>
+    /// <param name="consolidatedAtUtc">
+    /// The UTC timestamp indicating when the transactions were consolidated.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Token used to cancel the operation.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> that represents the asynchronous update operation.
+    /// </returns>
+    public async Task MarkAsConsolidatedAsync(
+        IReadOnlyCollection<long> transactionIds,
+        Guid batchId,
+        DateTime consolidatedAtUtc,
+        CancellationToken cancellationToken)
     {
         const string sql = """
             update transactions
@@ -61,19 +105,47 @@ public sealed class TransactionRepository : ITransactionRepository
             """;
 
         await using var connection = _connectionFactory.Create();
-        await connection.ExecuteAsync(new CommandDefinition(
-            sql,
-            new
-            {
-                TransactionIds = transactionIds.ToArray(),
-                BatchId = batchId,
-                ConsolidatedAtUtc = consolidatedAtUtc,
-                Status = (int)TransactionProcessingStatus.Consolidated
-            },
-            cancellationToken: cancellationToken));
+
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                sql,
+                new
+                {
+                    TransactionIds = transactionIds.ToArray(),
+                    BatchId = batchId,
+                    ConsolidatedAtUtc = consolidatedAtUtc,
+                    Status = (int)TransactionProcessingStatus.Consolidated
+                },
+                cancellationToken: cancellationToken));
     }
 
-    public async Task MarkAsFailedAsync(IReadOnlyCollection<long> transactionIds, Guid batchId, int attemptCount, TransactionProcessingStatus status, CancellationToken cancellationToken)
+    /// <summary>
+    /// Marks the specified transactions as failed during processing.
+    /// </summary>
+    /// <param name="transactionIds">
+    /// The collection of transaction identifiers to update.
+    /// </param>
+    /// <param name="batchId">
+    /// The identifier of the batch associated with the failed processing attempt.
+    /// </param>
+    /// <param name="attemptCount">
+    /// The number of processing attempts recorded for the transactions.
+    /// </param>
+    /// <param name="status">
+    /// The resulting processing status to assign to the transactions.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Token used to cancel the operation.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> that represents the asynchronous update operation.
+    /// </returns>
+    public async Task MarkAsFailedAsync(
+        IReadOnlyCollection<long> transactionIds,
+        Guid batchId,
+        int attemptCount,
+        TransactionProcessingStatus status,
+        CancellationToken cancellationToken)
     {
         const string sql = """
             update transactions
@@ -84,15 +156,17 @@ public sealed class TransactionRepository : ITransactionRepository
             """;
 
         await using var connection = _connectionFactory.Create();
-        await connection.ExecuteAsync(new CommandDefinition(
-            sql,
-            new
-            {
-                TransactionIds = transactionIds.ToArray(),
-                Status = (int)status,
-                BatchId = batchId,
-                AttemptCount = attemptCount
-            },
-            cancellationToken: cancellationToken));
+
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                sql,
+                new
+                {
+                    TransactionIds = transactionIds.ToArray(),
+                    Status = (int)status,
+                    BatchId = batchId,
+                    AttemptCount = attemptCount
+                },
+                cancellationToken: cancellationToken));
     }
 }

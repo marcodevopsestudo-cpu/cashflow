@@ -12,16 +12,31 @@ using Xunit;
 
 namespace ConsolidationService.Application.Tests.Steps;
 
+/// <summary>
+/// Unit tests for <see cref="RegisterBatchStep"/>.
+/// </summary>
 public sealed class RegisterBatchStepTests
 {
+    /// <summary>
+    /// Ensures that processing is interrupted when the batch has already been completed.
+    /// </summary>
     [Fact]
     public async Task Should_throw_when_batch_has_already_succeeded()
     {
+        // Arrange
         var repository = Substitute.For<IDailyBatchRepository>();
-        repository.GetAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(new DailyBatch { BatchId = Guid.NewGuid(), Status = BatchStatus.Succeeded });
 
-        var step = new RegisterBatchStep(repository, NullLogger<RegisterBatchStep>.Instance);
+        repository.GetAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new DailyBatch
+            {
+                BatchId = Guid.NewGuid(),
+                Status = BatchStatus.Succeeded
+            });
+
+        var step = new RegisterBatchStep(
+            repository,
+            NullLogger<RegisterBatchStep>.Instance);
+
         var context = new BatchExecutionContext
         {
             Message = new ConsolidationBatchMessage
@@ -33,8 +48,10 @@ public sealed class RegisterBatchStepTests
             }
         };
 
+        // Act
         var action = async () => await step.ExecuteAsync(context, CancellationToken.None);
 
+        // Assert
         await action.Should().ThrowAsync<BatchAlreadyProcessedException>();
     }
 }
