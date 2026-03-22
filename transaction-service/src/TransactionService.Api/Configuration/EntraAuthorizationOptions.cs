@@ -9,7 +9,8 @@ public sealed class EntraAuthorizationOptions
 
     public bool Enabled { get; set; }
     public string[] AllowedAppIds { get; set; } = [];
-    public string[] RequiredRoles { get; set; } = [];
     public string[] AllowedAudiences { get; set; } = [];
     public string[] AllowedIssuers { get; set; } = [];
+    public string[] RequiredRoles { get; set; } = [];
+    public string[] RequiredScopes { get; set; } = [];
 }
