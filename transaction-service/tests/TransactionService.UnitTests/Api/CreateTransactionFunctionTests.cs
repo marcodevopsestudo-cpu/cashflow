@@ -22,11 +22,19 @@ using Xunit;
 
 namespace TransactionService.UnitTests.Api;
 
+/// <summary>
+/// Unit tests for <see cref="CreateTransactionFunction"/>.
+/// </summary>
 public sealed class CreateTransactionFunctionTests
 {
+    /// <summary>
+    /// Verifies that when an idempotent request is replayed,
+    /// the response contains the appropriate headers.
+    /// </summary>
     [Fact]
     public async Task Run_ShouldMarkResponseWhenIdempotencyWasReplayed()
     {
+        // Arrange
         var mediator = new Mock<IMediator>();
         var transactionId = Guid.NewGuid();
 
@@ -47,7 +55,10 @@ public sealed class CreateTransactionFunctionTests
                     null),
                 true));
 
-        var function = new CreateTransactionFunction(mediator.Object, NullLogger<CreateTransactionFunction>.Instance);
+        var function = new CreateTransactionFunction(
+            mediator.Object,
+            NullLogger<CreateTransactionFunction>.Instance);
+
         var context = new FakeFunctionContext();
         context.Items[CorrelationConstants.CorrelationIdItemKey] = "corr-1";
         context.SetIdempotencyKey("idem-1");
@@ -64,16 +75,29 @@ public sealed class CreateTransactionFunctionTests
 
         var request = new FakeHttpRequestData(context, requestPayload, HttpMethod.Post.Method);
 
+        // Act
         var response = await function.Run(request, context, CancellationToken.None);
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        response.Headers.TryGetValues(IdempotencyConstants.IdempotencyReplayedHeaderName, out var replayedHeader).Should().BeTrue();
+
+        response.Headers
+            .TryGetValues(IdempotencyConstants.IdempotencyReplayedHeaderName, out var replayedHeader)
+            .Should().BeTrue();
+
         replayedHeader!.Single().Should().Be("true");
-        response.Headers.TryGetValues(IdempotencyConstants.IdempotencyHeaderName, out var idempotencyValues).Should().BeTrue();
+
+        response.Headers
+            .TryGetValues(IdempotencyConstants.IdempotencyHeaderName, out var idempotencyValues)
+            .Should().BeTrue();
+
         idempotencyValues!.Single().Should().Be("idem-1");
     }
 }
 
+/// <summary>
+/// Fake implementation of <see cref="FunctionContext"/> for testing purposes.
+/// </summary>
 internal sealed class FakeFunctionContext : FunctionContext
 {
     private IDictionary<object, object> _items = new Dictionary<object, object>();
@@ -82,6 +106,7 @@ internal sealed class FakeFunctionContext : FunctionContext
     public FakeFunctionContext()
     {
         var services = new ServiceCollection();
+
         services.AddLogging();
         services.AddSingleton<IOptions<WorkerOptions>>(Options.Create(new WorkerOptions
         {
@@ -103,6 +128,9 @@ internal sealed class FakeFunctionContext : FunctionContext
     public override CancellationToken CancellationToken => CancellationToken.None;
 }
 
+/// <summary>
+/// Fake implementation of <see cref="HttpRequestData"/> for testing purposes.
+/// </summary>
 internal sealed class FakeHttpRequestData : HttpRequestData
 {
     private readonly MemoryStream _body;
@@ -112,6 +140,7 @@ internal sealed class FakeHttpRequestData : HttpRequestData
     {
         var json = JsonSerializer.Serialize(payload);
         _body = new MemoryStream(Encoding.UTF8.GetBytes(json));
+
         Headers = [];
         Method = method;
         Url = new Uri("https://localhost/api/transactions");
@@ -127,12 +156,14 @@ internal sealed class FakeHttpRequestData : HttpRequestData
     public override string Method { get; }
 
     public override HttpResponseData CreateResponse()
-    {
-        return new FakeHttpResponseData(FunctionContext);
-    }
+        => new FakeHttpResponseData(FunctionContext);
 }
 
-internal sealed class FakeHttpResponseData(FunctionContext functionContext) : HttpResponseData(functionContext)
+/// <summary>
+/// Fake implementation of <see cref="HttpResponseData"/>.
+/// </summary>
+internal sealed class FakeHttpResponseData(FunctionContext functionContext)
+    : HttpResponseData(functionContext)
 {
     public override HttpStatusCode StatusCode { get; set; }
     public override HttpHeadersCollection Headers { get; set; } = [];
@@ -140,15 +171,26 @@ internal sealed class FakeHttpResponseData(FunctionContext functionContext) : Ht
     public override HttpCookies Cookies { get; } = new FakeHttpCookies();
 }
 
+/// <summary>
+/// Fake implementation of <see cref="HttpCookies"/>.
+/// </summary>
 internal sealed class FakeHttpCookies : HttpCookies
 {
     private readonly List<IHttpCookie> _cookies = [];
 
-    public override void Append(string name, string value) => _cookies.Add(new FakeHttpCookie(name, value));
-    public override void Append(IHttpCookie cookie) => _cookies.Add(cookie);
-    public override IHttpCookie CreateNew() => new FakeHttpCookie(string.Empty, string.Empty);
+    public override void Append(string name, string value)
+        => _cookies.Add(new FakeHttpCookie(name, value));
+
+    public override void Append(IHttpCookie cookie)
+        => _cookies.Add(cookie);
+
+    public override IHttpCookie CreateNew()
+        => new FakeHttpCookie(string.Empty, string.Empty);
 }
 
+/// <summary>
+/// Fake implementation of <see cref="IHttpCookie"/>.
+/// </summary>
 internal sealed class FakeHttpCookie(string name, string value) : IHttpCookie
 {
     public string Name { get; } = name;

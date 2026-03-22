@@ -2,6 +2,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using TransactionService.Api.Common.Middleware;
 using TransactionService.Api.Configuration;
 using TransactionService.Api.Middlewares;
 using TransactionService.Api.Security;

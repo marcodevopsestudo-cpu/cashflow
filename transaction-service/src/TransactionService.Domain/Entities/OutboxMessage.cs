@@ -5,9 +5,7 @@ namespace TransactionService.Domain.Entities;
 /// </summary>
 public sealed class OutboxMessage
 {
-    private OutboxMessage()
-    {
-    }
+ 
 
     /// <summary>
     /// Gets the outbox message identifier.

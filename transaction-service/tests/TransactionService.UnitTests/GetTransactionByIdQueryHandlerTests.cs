@@ -11,13 +11,17 @@ using Xunit;
 namespace TransactionService.UnitTests;
 
 /// <summary>
-/// Contains unit tests for the transaction retrieval query handler.
+/// Unit tests for <see cref="GetTransactionByIdQueryHandler"/>.
 /// </summary>
 public sealed class GetTransactionByIdQueryHandlerTests
 {
+    /// <summary>
+    /// Verifies that the handler returns a transaction DTO when the transaction exists.
+    /// </summary>
     [Fact]
     public async Task Handle_ShouldReturnTransactionDto_WhenTransactionExists()
     {
+        // Arrange
         var repositoryMock = new Mock<ITransactionRepository>();
 
         var transactionId = Guid.NewGuid();
@@ -42,8 +46,10 @@ public sealed class GetTransactionByIdQueryHandlerTests
 
         var query = new GetTransactionByIdQuery(transactionId);
 
+        // Act
         var result = await handler.Handle(query, CancellationToken.None);
 
+        // Assert
         result.Should().NotBeNull();
         result.AccountId.Should().Be(transaction.AccountId);
         result.Amount.Should().Be(transaction.Amount);
@@ -55,9 +61,14 @@ public sealed class GetTransactionByIdQueryHandlerTests
             Times.Once);
     }
 
+    /// <summary>
+    /// Verifies that the handler throws <see cref="EntityNotFoundApplicationException"/>
+    /// when the transaction does not exist.
+    /// </summary>
     [Fact]
     public async Task Handle_ShouldThrowEntityNotFoundApplicationException_WhenTransactionDoesNotExist()
     {
+        // Arrange
         var repositoryMock = new Mock<ITransactionRepository>();
         var transactionId = Guid.NewGuid();
 
@@ -70,8 +81,11 @@ public sealed class GetTransactionByIdQueryHandlerTests
             NullLogger<GetTransactionByIdQueryHandler>.Instance);
 
         var query = new GetTransactionByIdQuery(transactionId);
+
+        // Act
         var act = async () => await handler.Handle(query, CancellationToken.None);
 
+        // Assert
         await act.Should().ThrowAsync<EntityNotFoundApplicationException>();
 
         repositoryMock.Verify(
