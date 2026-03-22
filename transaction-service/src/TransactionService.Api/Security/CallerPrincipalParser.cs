@@ -25,7 +25,7 @@ public static class CallerPrincipalParser
         {
             var decodedBytes = Convert.FromBase64String(encoded);
             var json = Encoding.UTF8.GetString(decodedBytes);
-
+            Console.WriteLine($"X-MS-CLIENT-PRINCIPAL decoded: {json}");
             payload = JsonSerializer.Deserialize<ClientPrincipalPayload>(
                 json,
                 new JsonSerializerOptions
@@ -45,6 +45,11 @@ public static class CallerPrincipalParser
 
         string? GetClaim(params string[] names) =>
             payload.Claims
+                .Select(c => new
+                {
+                    Type = c.GetClaimType(),
+                    Value = c.GetClaimValue()
+                })
                 .FirstOrDefault(c => names.Contains(c.Type, StringComparer.OrdinalIgnoreCase))
                 ?.Value;
 
@@ -54,16 +59,21 @@ public static class CallerPrincipalParser
         var issuer = GetClaim("iss");
 
         var roles = payload.Claims
+            .Select(c => new
+            {
+                Type = c.GetClaimType(),
+                Value = c.GetClaimValue()
+            })
             .Where(c => string.Equals(c.Type, "roles", StringComparison.OrdinalIgnoreCase))
             .Select(c => c.Value)
             .Where(v => !string.IsNullOrWhiteSpace(v))
             .ToArray();
 
-        var scp = GetClaim("scp");
+        var scopeClaim = GetClaim("scp");
 
-        var scopes = string.IsNullOrWhiteSpace(scp)
+        var scopes = string.IsNullOrWhiteSpace(scopeClaim)
             ? Array.Empty<string>()
-            : scp.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            : scopeClaim.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         return new CallerPrincipal(
             appId,
@@ -84,7 +94,12 @@ public static class CallerPrincipalParser
 
     private sealed class ClientPrincipalClaim
     {
-        public string Type { get; set; } = string.Empty;
-        public string Value { get; set; } = string.Empty;
+        public string? Type { get; set; }
+        public string? Value { get; set; }
+        public string? Typ { get; set; }
+        public string? Val { get; set; }
+
+        public string GetClaimType() => Type ?? Typ ?? string.Empty;
+        public string GetClaimValue() => Value ?? Val ?? string.Empty;
     }
 }
