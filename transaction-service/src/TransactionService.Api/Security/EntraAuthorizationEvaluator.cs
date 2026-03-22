@@ -2,9 +2,6 @@ using TransactionService.Api.Configuration;
 
 namespace TransactionService.Api.Security;
 
-/// <summary>
-/// Evaluates whether an authenticated Entra caller is authorized to invoke the API.
-/// </summary>
 public sealed class EntraAuthorizationEvaluator
 {
     public AuthorizationDecision Evaluate(CallerPrincipal? principal, EntraAuthorizationOptions options)
@@ -39,16 +36,25 @@ public sealed class EntraAuthorizationEvaluator
             return AuthorizationDecision.Deny(AuthorizationFailureReason.InvalidIssuer);
         }
 
-        if (options.RequiredRoles.Length > 0 && !principal.Roles.Any(role => Contains(options.RequiredRoles, role)))
+        var hasRequiredRole =
+            options.RequiredRoles.Length == 0 ||
+            principal.Roles.Any(role => Contains(options.RequiredRoles, role));
+
+        var hasRequiredScope =
+            options.RequiredScopes.Length == 0 ||
+            principal.Scopes.Any(scope => Contains(options.RequiredScopes, scope));
+
+        if (!hasRequiredRole && !hasRequiredScope)
         {
-            return AuthorizationDecision.Deny(AuthorizationFailureReason.MissingRequiredRole);
+            return AuthorizationDecision.Deny(AuthorizationFailureReason.MissingRequiredPermission);
         }
 
         return AuthorizationDecision.Allow(principal);
     }
 
     private static bool Contains(IEnumerable<string> source, string? value)
-        => !string.IsNullOrWhiteSpace(value) && source.Contains(value, StringComparer.OrdinalIgnoreCase);
+        => !string.IsNullOrWhiteSpace(value) &&
+           source.Contains(value, StringComparer.OrdinalIgnoreCase);
 }
 
 public sealed record AuthorizationDecision(bool IsAllowed, AuthorizationFailureReason? FailureReason, CallerPrincipal? Principal)
@@ -64,5 +70,5 @@ public enum AuthorizationFailureReason
     AppIdNotAllowed,
     InvalidAudience,
     InvalidIssuer,
-    MissingRequiredRole
+    MissingRequiredPermission
 }

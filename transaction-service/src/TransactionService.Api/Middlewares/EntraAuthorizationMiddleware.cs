@@ -77,7 +77,7 @@ public sealed class EntraAuthorizationMiddleware : IFunctionsWorkerMiddleware
         AuthorizationFailureReason.AppIdNotAllowed => "The caller application is not authorized to access this API.",
         AuthorizationFailureReason.InvalidAudience => "The token audience is not allowed for this API.",
         AuthorizationFailureReason.InvalidIssuer => "The token issuer is not allowed for this API.",
-        AuthorizationFailureReason.MissingRequiredRole => "The caller does not have the required application role.",
+        
         _ => "The caller is not authorized to access this API."
     };
 }

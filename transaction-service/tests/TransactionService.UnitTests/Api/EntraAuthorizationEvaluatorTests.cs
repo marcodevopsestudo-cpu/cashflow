@@ -1,4 +1,5 @@
 using FluentAssertions;
+using System.Collections.ObjectModel;
 using TransactionService.Api.Configuration;
 using TransactionService.Api.Security;
 using Xunit;
@@ -35,7 +36,7 @@ public sealed class EntraAuthorizationEvaluatorTests
             "api://transaction-service",
             "https://sts.windows.net/tenant-1/",
             ["transactions.write"],
-            new Dictionary<string, string[]>());
+            new ReadOnlyCollection<string>(new List<string>()));
 
         var options = new EntraAuthorizationOptions
         {
@@ -58,7 +59,7 @@ public sealed class EntraAuthorizationEvaluatorTests
             "api://transaction-service",
             "https://sts.windows.net/tenant-1/",
             ["transactions.write"],
-            new Dictionary<string, string[]>());
+            new ReadOnlyCollection<string>(new List<string>()));
 
         var options = new EntraAuthorizationOptions
         {
