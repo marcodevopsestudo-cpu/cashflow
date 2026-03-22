@@ -7,6 +7,7 @@ using TransactionService.Api.Common.Constants;
 using TransactionService.Api.Common.Extensions;
 using TransactionService.Api.Contracts.Requests;
 using TransactionService.Application.Common.Diagnostics;
+using TransactionService.Api.Resources;
 using TransactionService.Application.Transactions.Commands.CreateTransaction;
 
 namespace TransactionService.Api.Functions;
@@ -47,13 +48,13 @@ public sealed class CreateTransactionFunction
 
         if (payload is null)
         {
-            return await request.CreateErrorResponseAsync(HttpStatusCode.BadRequest, "validation_error", "The request body is required.", null, cancellationToken);
+            return await request.CreateErrorResponseAsync(HttpStatusCode.BadRequest, ApiMessageCatalog.ValidationErrorCode, ApiMessageCatalog.RequestBodyRequired, null, cancellationToken);
         }
 
         var correlationId = context.GetCorrelationId();
 
         var idempotencyKey = context.GetIdempotencyKey()
-            ?? throw new InvalidOperationException("Idempotency-Key was not resolved.");
+            ?? throw new InvalidOperationException(ApiMessageCatalog.IdempotencyKeyNotResolved);
 
         var result = await _mediator.Send(new CreateTransactionCommand(
             payload.AccountId,

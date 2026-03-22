@@ -1,5 +1,6 @@
 using System.Net;
 using TransactionService.Application.Common.Errors;
+using TransactionService.Application.Resources;
 
 namespace TransactionService.Application.Common.Exceptions;
 
@@ -13,16 +14,13 @@ namespace TransactionService.Application.Common.Exceptions;
 /// </remarks>
 public sealed class RequestInProgressApplicationException : ApplicationExceptionBase
 {
-    private const string DefaultMessage =
-        "A request with the same Idempotency-Key is already being processed.";
-
     /// <summary>
     /// Initializes a new instance of the <see cref="RequestInProgressApplicationException"/> class.
     /// </summary>
     public RequestInProgressApplicationException()
         : base(new ApplicationError(
             ErrorCodes.RequestInProgress,
-            DefaultMessage,
+            MessageCatalog.RequestWithSameIdempotencyKeyAlreadyInProgress,
             (int)HttpStatusCode.Conflict))
     {
     }

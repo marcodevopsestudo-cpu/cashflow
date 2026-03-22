@@ -10,6 +10,7 @@ using TransactionService.Infrastructure.Idempotency;
 using TransactionService.Infrastructure.Messaging;
 using TransactionService.Infrastructure.Persistence;
 using TransactionService.Infrastructure.Persistence.Repositories;
+using TransactionService.Infrastructure.Resources;
 
 namespace TransactionService.Infrastructure;
 
@@ -35,7 +36,7 @@ public static class DependencyInjection
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new InvalidOperationException(
-                "Postgres connection string not found. Configure ConnectionStrings__Postgres.");
+                InfrastructureMessageCatalog.PostgresConnectionStringNotFound);
         }
 
 

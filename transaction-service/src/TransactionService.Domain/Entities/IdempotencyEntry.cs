@@ -1,3 +1,5 @@
+using TransactionService.Domain.Resources;
+
 namespace TransactionService.Domain.Entities;
 
 /// <summary>
@@ -57,12 +59,12 @@ public sealed class IdempotencyEntry
     {
         if (string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            throw new ArgumentException("IdempotencyKey cannot be null or empty.", nameof(idempotencyKey));
+            throw new ArgumentException(DomainMessageCatalog.IdempotencyKeyCannotBeNullOrEmpty, nameof(idempotencyKey));
         }
 
         if (string.IsNullOrWhiteSpace(requestHash))
         {
-            throw new ArgumentException("RequestHash cannot be null or empty.", nameof(requestHash));
+            throw new ArgumentException(DomainMessageCatalog.RequestHashCannotBeNullOrEmpty, nameof(requestHash));
         }
 
         return new IdempotencyEntry
@@ -87,12 +89,12 @@ public sealed class IdempotencyEntry
     {
         if (transactionId == Guid.Empty)
         {
-            throw new ArgumentException("TransactionId cannot be empty.", nameof(transactionId));
+            throw new ArgumentException(DomainMessageCatalog.TransactionIdCannotBeEmpty, nameof(transactionId));
         }
 
         if (IsCompleted)
         {
-            throw new InvalidOperationException("The idempotency entry has already been completed.");
+            throw new InvalidOperationException(DomainMessageCatalog.IdempotencyEntryAlreadyCompleted);
         }
 
         TransactionId = transactionId;

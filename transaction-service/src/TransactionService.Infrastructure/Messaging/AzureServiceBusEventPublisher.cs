@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using TransactionService.Application.Abstractions.Messaging;
 using TransactionService.Application.Resources;
 using TransactionService.Infrastructure.Configuration;
+using TransactionService.Infrastructure.Resources;
 
 namespace TransactionService.Infrastructure.Messaging;
 
@@ -81,7 +82,7 @@ public sealed class AzureServiceBusEventPublisher : IIntegrationEventPublisher, 
         message.ApplicationProperties["occurredOnUtc"] = integrationEvent.OccurredOnUtc;
 
         _logger.LogInformation(
-            "Publishing integration event {EventName} with event id {EventId}",
+            InfrastructureMessageCatalog.PublishingIntegrationEvent,
             integrationEvent.EventName,
             integrationEvent.EventId);
 
@@ -110,12 +111,12 @@ public sealed class AzureServiceBusEventPublisher : IIntegrationEventPublisher, 
         {
             return new ServiceBusClient(
                 settings.FullyQualifiedNamespace ?? throw new InvalidOperationException(
-                    "ServiceBus namespace not found. Configure ServiceBus__FullyQualifiedNamespace when UseManagedIdentity is true."),
+                    InfrastructureMessageCatalog.ServiceBusNamespaceNotFound),
                 new DefaultAzureCredential());
         }
 
         return new ServiceBusClient(
             settings.ConnectionString ?? throw new InvalidOperationException(
-                "Service Bus connection string not found. Configure ServiceBus__ConnectionString when UseManagedIdentity is false."));
+                InfrastructureMessageCatalog.ServiceBusConnectionStringNotFound));
     }
 }
