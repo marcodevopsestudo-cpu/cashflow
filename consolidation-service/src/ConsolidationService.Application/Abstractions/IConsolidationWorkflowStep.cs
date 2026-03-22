@@ -7,5 +7,11 @@ namespace ConsolidationService.Application.Abstractions;
 /// </summary>
 public interface IConsolidationWorkflowStep
 {
+    /// <summary>
+    /// execute a consolidate workflow step
+    /// </summary>
+    /// <param name="context"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     Task ExecuteAsync(BatchExecutionContext context, CancellationToken cancellationToken);
 }

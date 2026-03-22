@@ -1,37 +1,71 @@
 using ConsolidationService.Application.Abstractions;
+using ConsolidationService.Application.Messages.Logs;
 using ConsolidationService.Application.Models;
+using ConsolidationService.Domain.Constants;
 using ConsolidationService.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace ConsolidationService.Application.Steps;
 
 /// <summary>
-/// Loads all pending transactions that belong to the current batch.
+/// Loads all pending transactions associated with the current batch execution context.
 /// </summary>
-public sealed class LoadTransactionsStep : IConsolidationWorkflowStep
+public sealed class LoadTransactionsStep
 {
     private readonly ITransactionRepository _transactionRepository;
     private readonly ILogger<LoadTransactionsStep> _logger;
 
-    public LoadTransactionsStep(ITransactionRepository transactionRepository, ILogger<LoadTransactionsStep> logger)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LoadTransactionsStep"/> class.
+    /// </summary>
+    /// <param name="transactionRepository">
+    /// Repository used to retrieve pending transactions for the batch.
+    /// </param>
+    /// <param name="logger">
+    /// Logger used to record structured information about transaction loading.
+    /// </param>
+    public LoadTransactionsStep(
+        ITransactionRepository transactionRepository,
+        ILogger<LoadTransactionsStep> logger)
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Loads pending transactions for the current batch and stores them in the execution context.
+    /// </summary>
+    /// <param name="context">
+    /// The workflow execution context containing the batch message and target transaction identifiers.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Token used to cancel the operation.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> that represents the asynchronous loading operation.
+    /// </returns>
+    /// <exception cref="InvalidBatchException">
+    /// Thrown when no pending transactions are found for the specified batch.
+    /// </exception>
     public async Task ExecuteAsync(BatchExecutionContext context, CancellationToken cancellationToken)
     {
-        var transactions = await _transactionRepository.GetPendingByIdsAsync(context.Message.TransactionIds, cancellationToken);
+        var message = context.Message;
+
+        var transactions = await _transactionRepository.GetPendingByIdsAsync(
+            message.TransactionIds,
+            cancellationToken);
+
         if (transactions.Count == 0)
         {
-            throw new InvalidBatchException($"Batch '{context.Message.BatchId}' does not contain pending transactions.");
+            throw new InvalidBatchException(
+                string.Format(ErrorMessages.NoPendingTransactions, message.BatchId));
         }
 
         context.Transactions = transactions;
 
         _logger.LogInformation(
-            "Loaded pending transactions for batch. BatchId: {BatchId}, LoadedTransactions: {LoadedTransactions}",
-            context.Message.BatchId,
+            BatchLogMessages.Workflow.LoadedPendingTransactions,
+            message.BatchId,
             transactions.Count);
     }
 }
