@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TransactionService.Application.Abstractions.Persistence;
 using TransactionService.Domain.Entities;
+using TransactionService.Infrastructure.Resources;
 
 namespace TransactionService.Infrastructure.Persistence.Repositories;
 
@@ -42,7 +43,7 @@ public sealed class IdempotencyRepository : IIdempotencyRepository
     {
         if (string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            throw new ArgumentException("Idempotency key cannot be null or whitespace.", nameof(idempotencyKey));
+            throw new ArgumentException(InfrastructureMessageCatalog.IdempotencyKeyCannotBeNullOrWhitespace, nameof(idempotencyKey));
         }
 
         return _dbContext.IdempotencyEntries

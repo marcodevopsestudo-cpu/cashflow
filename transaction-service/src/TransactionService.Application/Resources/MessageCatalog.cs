@@ -19,4 +19,6 @@ public static class MessageCatalog
     public const string OutboxProcessingFinished = "Outbox processing finished. {0} message(s) processed.";
     public const string ServiceBusTopicRequired = "ServiceBus:TopicName is required.";
     public const string PageSizeMustBeGreaterThanZero = "Outbox page size must be greater than zero.";
+    public const string RequestWithSameIdempotencyKeyAlreadyInProgress = "A request with the same Idempotency-Key is already being processed.";
+    public const string IdempotencyKeyAlreadyUsedWithDifferentPayload = "The provided Idempotency-Key was already used with a different payload.";
 }

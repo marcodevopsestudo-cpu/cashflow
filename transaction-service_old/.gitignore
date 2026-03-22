@@ -1,0 +1,9 @@
+# Local configuration
+src/TransactionService.Api/local.settings.json
+src/TransactionService.Api/appsettings.Development.json
+
+# Test results
+TestResults/
+*.trx
+coverage/
+coverage.cobertura.xml

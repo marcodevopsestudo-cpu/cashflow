@@ -8,6 +8,7 @@ using TransactionService.Api.Configuration;
 using TransactionService.Api.Security;
 using TransactionService.Application.Common.Diagnostics;
 using TransactionService.Application.Common.Errors;
+using TransactionService.Api.Resources;
 
 namespace TransactionService.Api.Middlewares;
 
@@ -79,7 +80,7 @@ public sealed class EntraAuthorizationMiddleware : IFunctionsWorkerMiddleware
             _logger.AuthorizationRejected(
                 correlationId,
                 principal?.AppId,
-                decision.FailureReason?.ToString() ?? "Unknown");
+                decision.FailureReason?.ToString() ?? ApiMessageCatalog.AuthorizationReasonUnknown);
 
             context.GetInvocationResult().Value = await request.CreateErrorResponseAsync(
                 statusCode,
@@ -97,8 +98,8 @@ public sealed class EntraAuthorizationMiddleware : IFunctionsWorkerMiddleware
 
             _logger.AuthorizationAccepted(
                 correlationId,
-                decision.Principal.AppId ?? "unknown",
-                decision.Principal.TenantId ?? "unknown");
+                decision.Principal.AppId ?? ApiMessageCatalog.AuthorizationValueUnknown,
+                decision.Principal.TenantId ?? ApiMessageCatalog.AuthorizationValueUnknown);
         }
 
         await next(context);
@@ -111,11 +112,11 @@ public sealed class EntraAuthorizationMiddleware : IFunctionsWorkerMiddleware
     /// <returns>A user-friendly authorization failure message.</returns>
     private static string GetMessage(AuthorizationFailureReason? reason) => reason switch
     {
-        AuthorizationFailureReason.MissingPrincipal => "The request is not authenticated by Microsoft Entra ID.",
-        AuthorizationFailureReason.MissingAppId => "The caller application identifier was not found in the token claims.",
-        AuthorizationFailureReason.AppIdNotAllowed => "The caller application is not authorized to access this API.",
-        AuthorizationFailureReason.InvalidAudience => "The token audience is not allowed for this API.",
-        AuthorizationFailureReason.InvalidIssuer => "The token issuer is not allowed for this API.",
-        _ => "The caller is not authorized to access this API."
+        AuthorizationFailureReason.MissingPrincipal => ApiMessageCatalog.MissingPrincipal,
+        AuthorizationFailureReason.MissingAppId => ApiMessageCatalog.MissingAppId,
+        AuthorizationFailureReason.AppIdNotAllowed => ApiMessageCatalog.AppIdNotAllowed,
+        AuthorizationFailureReason.InvalidAudience => ApiMessageCatalog.InvalidAudience,
+        AuthorizationFailureReason.InvalidIssuer => ApiMessageCatalog.InvalidIssuer,
+        _ => ApiMessageCatalog.UnauthorizedCaller
     };
 }

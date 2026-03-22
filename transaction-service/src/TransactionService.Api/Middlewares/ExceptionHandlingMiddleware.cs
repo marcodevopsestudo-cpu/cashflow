@@ -4,6 +4,7 @@ using Microsoft.Azure.Functions.Worker.Middleware;
 using TransactionService.Api.Common.Extensions;
 using TransactionService.Application.Common.Errors;
 using TransactionService.Application.Common.Exceptions;
+using TransactionService.Api.Resources;
 
 namespace TransactionService.Api.Middlewares;
 
@@ -63,7 +64,7 @@ public sealed class ExceptionHandlingMiddleware : IFunctionsWorkerMiddleware
             context.GetInvocationResult().Value = await request.CreateErrorResponseAsync(
                 HttpStatusCode.InternalServerError,
                 ErrorCodes.Unexpected,
-                "An unexpected error occurred.",
+                ApiMessageCatalog.UnexpectedError,
                 correlationId,
                 CancellationToken.None);
         }

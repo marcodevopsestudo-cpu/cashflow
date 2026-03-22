@@ -3,6 +3,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using TransactionService.Api.Common.Extensions;
 using TransactionService.Application.Transactions.Commands.ProcessOutBox;
+using TransactionService.Api.Resources;
 
 namespace TransactionService.Api.Functions;
 
@@ -28,7 +29,7 @@ public sealed class ProcessOutboxFunction(IMediator mediator, ILogger<ProcessOut
         var result = await _mediator.Send(new ProcessOutboxCommand(BatchSize, correlationId), cancellationToken);
 
         _logger.LogInformation(
-            "Outbox processing completed. Schedule status: {ScheduleStatus}. Processed {ProcessedCount} messages.",
+            ApiMessageCatalog.OutboxProcessingCompleted,
             timer.ScheduleStatus?.Next,
             result.ProcessedItems);
     }

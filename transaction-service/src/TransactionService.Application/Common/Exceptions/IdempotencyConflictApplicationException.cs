@@ -1,5 +1,6 @@
 using System.Net;
 using TransactionService.Application.Common.Errors;
+using TransactionService.Application.Resources;
 
 namespace TransactionService.Application.Common.Exceptions;
 
@@ -13,16 +14,13 @@ namespace TransactionService.Application.Common.Exceptions;
 /// </remarks>
 public sealed class IdempotencyConflictApplicationException : ApplicationExceptionBase
 {
-    private const string DefaultMessage =
-        "The provided Idempotency-Key was already used with a different payload.";
-
     /// <summary>
     /// Initializes a new instance of the <see cref="IdempotencyConflictApplicationException"/> class.
     /// </summary>
     public IdempotencyConflictApplicationException()
         : base(new ApplicationError(
             ErrorCodes.IdempotencyConflict,
-            DefaultMessage,
+            MessageCatalog.IdempotencyKeyAlreadyUsedWithDifferentPayload,
             (int)HttpStatusCode.Conflict))
     {
     }
