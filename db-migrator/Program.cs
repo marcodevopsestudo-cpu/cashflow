@@ -16,6 +16,7 @@ if (!Directory.Exists(migrationsPath))
     throw new DirectoryNotFoundException($"Migrations path not found: {migrationsPath}");
 }
 
+
 var scripts = Directory.GetFiles(migrationsPath, "*.sql", SearchOption.TopDirectoryOnly)
     .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
     .ToList();
