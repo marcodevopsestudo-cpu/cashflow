@@ -225,15 +225,21 @@ public sealed class OutboxProcessor : IOutboxProcessor
         IReadOnlyCollection<OutboxMessage> messages)
     {
         return new StoredIntegrationEventBatch(
-            Guid.NewGuid(),
-            DateTime.UtcNow,
-            messages.Select(m => new StoredIntegrationEventBatchItem(
-                m.Id,
-                m.AggregateId,
-                m.CorrelationId,
-                m.OccurredOnUtc,
-                m.Payload))
-            .ToArray());
+    Guid.NewGuid(),                    
+    "TransactionCreated",              
+    1,                                 
+    
+    DateTime.UtcNow,                   
+    messages.Select(message => new StoredIntegrationEventBatchItem(
+        message.Id,
+        message.EventName,
+        message.EventVersion,
+        message.AggregateId,
+        message.CorrelationId,
+        message.OccurredOnUtc,
+        message.Payload
+    )).ToList()
+);
     }
 
     /// <summary>
