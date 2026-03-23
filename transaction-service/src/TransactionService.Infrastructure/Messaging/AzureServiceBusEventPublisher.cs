@@ -60,6 +60,31 @@ public sealed class AzureServiceBusEventPublisher : IIntegrationEventPublisher, 
         return PublishAsync(storedEvent, cancellationToken);
     }
 
+    public async Task PublishBatchAsync(
+    StoredIntegrationEventBatch message,
+    CancellationToken cancellationToken)
+    {
+        var payload = JsonSerializer.Serialize(message);
+
+        var serviceBusMessage = new ServiceBusMessage(payload)
+        {
+            MessageId = message.BatchId.ToString(),
+            Subject = "OutboxBatch",
+            ContentType = "application/json"
+        };
+
+        serviceBusMessage.ApplicationProperties["batchId"] = message.BatchId;
+        serviceBusMessage.ApplicationProperties["occurredOnUtc"] = message.OccurredOnUtc;
+        serviceBusMessage.ApplicationProperties["transactionCount"] = message.Transactions.Count;
+
+        await _sender.Value.SendMessageAsync(serviceBusMessage, cancellationToken);
+
+        _logger.LogInformation(
+            "Integration event batch published to Service Bus. BatchId: {BatchId}, Count: {Count}",
+            message.BatchId,
+            message.Transactions.Count);
+    }
+
     /// <summary>
     /// Publishes the specified stored integration event payload.
     /// </summary>
