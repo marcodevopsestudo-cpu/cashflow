@@ -1,93 +1,216 @@
-# Enterprise architecture note
+# Architecture Details
 
-## Context
+## 1. Context
 
 The challenge requires two business capabilities:
 
-1. a service that records daily debit and credit entries;
-2. a service that provides the consolidated daily balance.
+- transaction control;
+- daily consolidated balance.
 
-The current implementation fully addresses the first capability and lays the technical foundation for the second one with an event-driven contract.
+It also requires that the transaction service should not become unavailable if the daily consolidation system fails. This is the central non-functional driver behind the architectural decomposition.
 
-## Component view
+---
 
-```mermaid
-flowchart TB
-    subgraph Edge[Edge]
-        Client[Client / API Consumer]
-        Entra[Microsoft Entra ID]
-    end
+## 2. Containers and Responsibilities
 
-    subgraph Tx[transaction-service]
-        Http[HTTP Functions]
-        Middleware[Correlation + Idempotency + Authorization Middlewares]
-        App[Application Layer / MediatR]
-        Infra[Infrastructure Layer]
-        Timer[Outbox timer function]
-    end
+### Transaction Service
 
-    subgraph Data[Data and Integration]
-        Pg[(PostgreSQL)]
-        Topic[(Service Bus Topic)]
-        Kv[Key Vault]
-        Insights[Application Insights]
-    end
+Hosting model:
 
-    subgraph Future[Planned]
-        Balance[balance-consolidation-service]
-        DailyBalance[(Daily balance projection)]
-    end
+- Azure Functions (.NET isolated)
 
-    Client --> Entra
-    Client --> Http
-    Entra --> Middleware
-    Http --> App --> Infra
-    Infra --> Pg
-    Infra --> Kv
-    Timer --> Topic
-    Topic --> Balance --> DailyBalance
-    Tx --> Insights
-    Future --> Insights
-```
+Responsibilities:
 
-## Main decisions
+- receive HTTP requests;
+- validate input;
+- persist transaction data;
+- persist outbox messages in the same local transaction;
+- expose transaction query endpoints;
+- periodically publish pending outbox records.
 
-### Serverless first
-Azure Functions was chosen to optimize delivery speed and operational simplicity. It is a strong fit for bursty workloads and allows the outbox timer to be hosted in the same workload.
+Internal logical layers:
 
-### Layered monorepo
-The repository is organized by bounded capability but keeps infra, migrations and the first service together. This reduces setup overhead during the initial phase and still leaves clear extraction points for future services.
+- API/Functions
+- Application
+- Domain
+- Infrastructure
 
-### Outbox instead of synchronous consolidation
-The transaction write path should not become unavailable when the consolidation flow fails. For that reason, the write model persists the event in an outbox table and publishes it asynchronously. This choice directly supports the non-functional requirement that the transaction service remains available even if the consolidated service is down.
+### Consolidation Service
 
-### Idempotency at the write edge
-The service stores an idempotency key and request hash. This reduces duplicate write risk, improves safety for retries and creates a base for consumer idempotency on the future consolidation side.
+Hosting model:
 
-## Observability recommendations
+- Azure Functions (.NET isolated)
 
-Current code already includes Application Insights. The next step is to standardize metrics such as:
+Responsibilities:
 
-- HTTP request rate, success rate and latency per endpoint.
-- Outbox backlog size.
-- Outbox processing batch duration.
-- Publish success/failure rate to Service Bus.
-- Function cold start and execution duration.
-- Consolidation lag once the second service is implemented.
+- consume Service Bus messages;
+- create/load batch metadata;
+- load pending transactions;
+- aggregate amounts by day;
+- update `daily_balance`;
+- mark processed transactions;
+- persist retry and manual handling information.
 
-Recommended dashboards:
+### PostgreSQL
 
-- API traffic and error rate.
-- Outbox operational health.
-- Service Bus delivery and dead-letter trends.
-- Database saturation and connection pool health.
+Responsibilities:
 
-## Future network hardening
+- system of record for transactions;
+- outbox persistence;
+- idempotency tracking;
+- consolidated read model;
+- batch state and manual error records.
 
-The current setup is intentionally simple for the challenge. A production-hardened version should evolve to:
+### Azure Service Bus
 
-- VNet integration for Function Apps.
-- Dedicated subnets for app integration and delegated database subnet.
-- PostgreSQL private access.
-- Private endpoints for Key Vault, Storage Account and Service Bus where appropriate.
-- Egress control and firewall rules aligned with the deployment strategy.
+Responsibilities:
+
+- decouple producer and consumer;
+- buffer spikes;
+- support asynchronous integration.
+
+### DB Migrator
+
+Responsibilities:
+
+- execute SQL scripts in order;
+- record migration history;
+- ensure script immutability through checksum verification.
+
+---
+
+## 3. Main Data Flows
+
+### 3.1 Transaction ingestion flow
+
+1. Client calls Transaction Service.
+2. Request is authenticated/authorized.
+3. Application validates input and idempotency key.
+4. Transaction is saved to PostgreSQL.
+5. Outbox message is saved in the same database transaction.
+6. API returns success without waiting for consolidation.
+
+### 3.2 Outbox publication flow
+
+1. Timer-triggered publisher runs.
+2. Pending outbox entries are loaded.
+3. Messages are published to Azure Service Bus.
+4. Outbox entries are marked as published or retried later on failure.
+
+### 3.3 Consolidation flow
+
+1. Consolidation Service receives a batch message.
+2. The workflow creates or loads the batch.
+3. Transactions are loaded and validated.
+4. Transactions are aggregated by date.
+5. `daily_balance` is upserted.
+6. Transactions are marked as consolidated.
+7. Batch is finalized.
+8. On repeated failure, a manual-review record is persisted.
+
+---
+
+## 4. Database Concerns
+
+### Transaction-side tables
+
+- transaction table
+- outbox table
+- idempotency table
+
+### Consolidation-side tables
+
+- `daily_balance`
+- `daily_batch`
+- `transaction_processing_error`
+
+### Migration approach
+
+Migration scripts are versioned in source control and applied through `db-migrator`.
+
+Important rule:
+
+- applied migration files should not be edited;
+- any schema change should be introduced through a new migration file.
+
+This keeps environments deterministic and auditable.
+
+---
+
+## 5. Reliability Patterns Used
+
+### Transactional Outbox
+
+Guarantees local atomicity between the write model and integration event registration.
+
+### Idempotency
+
+Required because HTTP retries and broker redelivery are expected realities in distributed systems.
+
+### Bounded Retry
+
+Avoids infinite loops and forces visibility when a problem needs manual intervention.
+
+### Manual Error Lane
+
+Useful for financial data where silent discard is unacceptable.
+
+---
+
+## 6. Why not synchronous balance calculation?
+
+A synchronous approach would make transaction ingestion directly dependent on the balance processor and potentially on aggregation logic, contention, and downstream failures.
+
+That would violate the core availability requirement of the challenge.
+
+The asynchronous model was therefore selected to preserve write-path availability and isolate responsibilities.
+
+---
+
+## 7. Why not process each transaction as an individual message?
+
+Per-transaction messaging is viable, but a batch contract was selected for this version because:
+
+- it reduces broker chatter for the consolidation workload;
+- it can reduce database round-trips during aggregation;
+- it is a pragmatic fit for daily balance materialization.
+
+Trade-off:
+
+- batch failure handling is more complex;
+- the current version still treats some failures at batch level.
+
+---
+
+## 8. Correlation and Diagnostics
+
+The preferred model is to create a correlation identifier at the HTTP boundary and propagate it through the outbox and messaging pipeline.
+
+This allows a reviewer or operator to answer questions such as:
+
+- which request generated this outbox record?
+- which batch updated this balance row?
+- which retries belong to the same business flow?
+
+---
+
+## 9. Network and Infrastructure Position
+
+Terraform is used to provision the platform resources. For the challenge, the infrastructure favors speed of delivery and clarity.
+
+Production-oriented evolution documented for later:
+
+- segmented VNets and subnets;
+- private endpoints;
+- stronger database isolation;
+- more restrictive ingress and egress controls.
+
+---
+
+## 10. Architectural Summary
+
+This architecture is intentionally pragmatic:
+
+- simple enough to explain clearly;
+- robust enough to satisfy the challenge’s non-functional direction;
+- extensible enough to evolve into a more production-grade enterprise implementation.
