@@ -107,7 +107,7 @@ This demonstrates the **decoupled integration between write and processing paths
 
 ---
 
-## High-Level Architecture
+## high-Level Architecture
 
 ```mermaid
 flowchart LR
