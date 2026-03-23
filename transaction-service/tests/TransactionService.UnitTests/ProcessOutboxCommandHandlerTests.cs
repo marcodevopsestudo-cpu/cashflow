@@ -21,32 +21,32 @@ public sealed class ProcessOutboxCommandHandlerTests
     {
         // Arrange
         var outboxProcessorMock = new Mock<IOutboxProcessor>();
-
-        var expectedProcessedCount = 10;
+        var batchSize = 10;
+        var executionId = Guid.NewGuid().ToString("N");
 
         outboxProcessorMock
-            .Setup(x => x.ProcessPendingMessagesAsync(expectedProcessedCount, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedProcessedCount);
+            .Setup(x => x.ProcessPendingMessagesAsync(batchSize, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(batchSize);
 
         var handler = new ProcessOutboxCommandHandler(
             outboxProcessorMock.Object,
             NullLogger<ProcessOutboxCommandHandler>.Instance);
 
         var command = new ProcessOutboxCommand(
-            expectedProcessedCount,
-            Guid.NewGuid().ToString("N"));
+            batchSize,
+            executionId);
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
-
-        
-        result.ProcessedItems.Should().Be(expectedProcessedCount);
+        result.ProcessedItems.Should().Be(batchSize);
 
         outboxProcessorMock.Verify(
-            x => x.ProcessPendingMessagesAsync(expectedProcessedCount, It.IsAny<CancellationToken>()),
+            x => x.ProcessPendingMessagesAsync(batchSize, It.IsAny<CancellationToken>()),
             Times.Once);
+
+        outboxProcessorMock.VerifyNoOtherCalls();
     }
 }

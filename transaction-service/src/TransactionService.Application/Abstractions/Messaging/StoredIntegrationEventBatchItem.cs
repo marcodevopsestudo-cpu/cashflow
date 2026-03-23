@@ -1,18 +1,16 @@
 namespace TransactionService.Application.Abstractions.Messaging;
 
 /// <summary>
-/// Represents a stored integration event ready to be published.
-/// This model is typically used by the Outbox pattern to transport
-/// serialized domain events to external messaging systems.
+/// Represents a single stored integration event contained within a batch payload.
 /// </summary>
 /// <param name="EventId">The unique identifier of the event.</param>
-/// <param name="EventName">The logical name of the event (used for routing and consumers).</param>
+/// <param name="EventName">The logical name of the event.</param>
 /// <param name="EventVersion">The version of the event contract.</param>
 /// <param name="AggregateId">The identifier of the aggregate that produced the event.</param>
 /// <param name="CorrelationId">The correlation identifier used for tracing across services.</param>
 /// <param name="OccurredOnUtc">The UTC timestamp when the event occurred.</param>
 /// <param name="Payload">The serialized payload of the event.</param>
-public sealed record StoredIntegrationEvent(
+public sealed record StoredIntegrationEventBatchItem(
     Guid EventId,
     string EventName,
     int EventVersion,

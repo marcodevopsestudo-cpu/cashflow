@@ -8,6 +8,7 @@ using TransactionService.Application.Abstractions.Persistence;
 using TransactionService.Infrastructure.Configuration;
 using TransactionService.Infrastructure.Idempotency;
 using TransactionService.Infrastructure.Messaging;
+using TransactionService.Infrastructure.Outbox;
 using TransactionService.Infrastructure.Persistence;
 using TransactionService.Infrastructure.Persistence.Repositories;
 using TransactionService.Infrastructure.Resources;
