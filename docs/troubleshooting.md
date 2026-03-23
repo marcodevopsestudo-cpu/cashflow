@@ -1,31 +1,39 @@
-# Troubleshooting
+# Troubleshooting Guide
 
-## Azure Functions deploy fails with sync trigger / malformed content
+This document captures common operational issues and recommended resolution steps.
 
-Symptoms:
-- GitHub Actions deploy reaches `Azure/functions-action@v1`
-- package upload succeeds
-- deployment fails during `Sync Trigger Functionapp`
+The goal is to provide quick diagnostics and recovery guidance for known failure scenarios.
 
-Recommended checks:
-1. Publish the Function project with `dotnet publish`, not only `dotnet build`.
-2. Deploy the publish output folder only, not the monorepo root or the project root.
-3. Ensure the publish folder contains these files at the root:
-   - `host.json`
-   - `worker.config.json`
-   - `functions.metadata`
-   - `extensions.json`
-   - `bin/`
-4. Publish with `/p:UseAppHost=false` for a cleaner Linux consumption package.
-5. When `AzureWebJobsStorage` uses managed identity, grant the Function managed identity these storage RBAC roles:
-   - `Storage Blob Data Owner`
-   - `Storage Queue Data Contributor`
-   - `Storage Account Contributor`
-   - `Storage Table Data Contributor`
-6. Grant the GitHub OIDC service principal blob data access to the same storage account so deployment can publish the package.
+---
 
-Current repository changes:
-- workflow publishes directly from `transaction-service/src/TransactionService.Api/TransactionService.Api.csproj`
-- publish folder is cleaned before each deploy
-- validation now checks `functions.metadata`, `extensions.json`, and `bin/`
-- Terraform grants `Storage Table Data Contributor` to the Function managed identity
+## 1. Azure Functions Deployment Failure (Sync Trigger / Malformed Package)
+
+### Symptoms
+
+- GitHub Actions workflow reaches `Azure/functions-action@v1`;
+- package upload succeeds;
+- deployment fails during **"Sync Trigger Function App"** step.
+
+---
+
+### Likely Cause
+
+The deployed package does not match the expected structure for Azure Functions (isolated worker model).
+
+This typically happens when:
+
+- the project is built but not properly published;
+- the wrong folder is deployed (e.g., project root instead of publish output);
+- required runtime files are missing.
+
+---
+
+### Resolution Steps
+
+1. **Ensure proper publish step**
+
+Use `dotnet publish`, not only `dotnet build`:
+
+```bash
+dotnet publish -c Release -o ./publish /p:UseAppHost=false
+```
