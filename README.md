@@ -32,7 +32,7 @@ This repository addresses that scope with:
 - **Transaction Service** for the synchronous write path;
 - **Consolidation Service** for the asynchronous daily balance processing path;
 - **DB Migrator** for controlled schema evolution;
-- architecture and operational documentation at the repository root and inside each service folder.
+- architecture and operational documentation organized under `docs/`.
 
 ---
 
@@ -53,7 +53,9 @@ Implemented capabilities:
 - Application Insights integration hooks
 - layered structure with Domain / Application / Infrastructure / API
 
-This service is the **main synchronous entry point** and is already positioned as the most complete part of the solution.
+This service is the **main synchronous entry point** and is the most complete part of the solution.
+
+---
 
 ### Functional MVP
 
@@ -71,7 +73,9 @@ Implemented capabilities:
 - manual review registration for exhausted failures
 - layered structure with Domain / Application / Infrastructure / Worker
 
-This service is **implemented and operational as an MVP**, focused on the challenge’s daily consolidation requirement and on showing architectural separation, resilience, and recoverability.
+This service is **implemented as a functional MVP**, demonstrating architectural separation, resilience, and recoverability.
+
+---
 
 ### Operational Support Component
 
@@ -80,7 +84,7 @@ This service is **implemented and operational as an MVP**, focused on the challe
 Implemented capabilities:
 
 - ordered SQL execution
-- migration history table
+- migration history tracking
 - checksum validation
 - fail-fast behavior for migration drift
 
@@ -88,20 +92,18 @@ Implemented capabilities:
 
 ## What Is Implemented End-to-End
 
-The repository already implements the following **end-to-end business flow**:
+The repository implements the following **end-to-end business flow**:
 
 1. a client sends a debit or credit request to **Transaction Service**;
-2. Transaction Service validates and persists the transaction in PostgreSQL;
-3. in the same database transaction, the service records an **outbox event**;
-4. a scheduled publisher reads pending outbox events and publishes a batch message;
+2. the transaction is validated and persisted in PostgreSQL;
+3. an **outbox event** is recorded in the same database transaction;
+4. a scheduled publisher reads pending outbox entries and publishes a batch message;
 5. **Consolidation Service** consumes the message asynchronously;
-6. the consolidation workflow loads pending transactions;
-7. the workflow aggregates credit and debit amounts by date;
-8. the workflow updates the `daily_balance` read model;
-9. the workflow marks transactions as consolidated;
-10. the daily consolidated balance becomes available in the database read model.
+6. transactions are loaded and aggregated by date;
+7. the `daily_balance` read model is updated;
+8. transactions are marked as processed.
 
-This means the repository is not only showing isolated services. It already demonstrates the intended **integration pattern between write path and consolidation path**.
+This demonstrates the **decoupled integration between write and processing paths**.
 
 ---
 
@@ -117,92 +119,4 @@ flowchart LR
     Bus --> Cons[Consolidation Service]
     Cons --> Pg
     Migrator[DB Migrator] --> Pg
-
-
-
-    ## Testing Strategy
-
-The current implementation focuses on validating the most critical business paths required by the challenge, while keeping the architecture open for more advanced testing strategies.
-
-### What is currently implemented
-
-- Unit tests for domain logic
-- Application-layer tests for use case orchestration
-- Validation of transaction persistence and outbox registration
-- Validation of consolidation logic at application level
-
-These tests ensure that the core business rules and data transformations behave as expected.
-
----
-
-### What is intentionally not fully implemented (yet)
-
-A full end-to-end integration test covering:
-
-1. transaction ingestion
-2. outbox persistence
-3. message publication
-4. consolidation processing
-5. final daily balance verification
-
----
-
-### Why this was not fully implemented
-
-Given the challenge time constraints, the focus was placed on:
-
-- delivering a clear architectural separation between services;
-- implementing the core business flows;
-- ensuring the system is resilient and decoupled;
-- documenting the integration model explicitly.
-
-A full integration test would require:
-
-- containerized infrastructure (PostgreSQL + message broker);
-- orchestration of multiple services;
-- controlled timing for async processing;
-- test environment isolation.
-
-This is considered a **next iteration step**, not a blocker for validating the architectural approach.
-
----
-
-### Planned evolution: Integration Testing
-
-The next step would be to introduce automated end-to-end tests using:
-
-- Testcontainers for PostgreSQL and message broker
-- A test harness orchestrating both services
-- Deterministic batch processing triggers
-- Assertions over the `daily_balance` read model
-
-#### Example scenario to be automated
-
-1. Create transactions:
-   - Credit: 100
-   - Debit: 40
-   - Credit: 15
-
-2. Trigger outbox publication
-
-3. Wait for consolidation processing
-
-4. Assert:
-   - daily balance = 75
-   - transactions marked as processed
-   - no processing errors
-
----
-
-### Architectural readiness for integration testing
-
-The system was designed to support this evolution:
-
-- clear separation between services
-- database schema explicitly defined
-- outbox pattern enabling deterministic event flow
-- consolidation workflow isolated in application layer
-- ability to run services independently
-
-This allows integration tests to be introduced without major refactoring.
 ```
