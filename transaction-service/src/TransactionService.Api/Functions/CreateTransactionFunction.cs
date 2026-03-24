@@ -79,9 +79,13 @@ public sealed class CreateTransactionFunction
             response.Headers.Add(IdempotencyConstants.IdempotencyReplayedHeaderName, "true");
         }
 
-        await response.WriteAsJsonAsync(result, cancellationToken);
-        _logger.CreateTransactionFunctionCompleted(result.Transaction.Id, correlationId, result.IsIdempotentReplay);
+        await response.WriteAsJsonAsync(result, statusCode, cancellationToken);
 
+        _logger.CreateTransactionFunctionCompleted(result.Transaction.Id, correlationId, result.IsIdempotentReplay);
+        _logger.LogInformation(
+    "CreateTransaction response generated. TransactionId={TransactionId}, Replay={Replay}",
+    result.Transaction.Id,
+    result.IsIdempotentReplay);
         return response;
     }
 }
