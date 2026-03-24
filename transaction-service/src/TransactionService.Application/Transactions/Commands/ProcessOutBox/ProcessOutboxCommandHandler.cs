@@ -24,8 +24,39 @@ public sealed class ProcessOutboxCommandHandler(
     /// <returns></returns>
     public async Task<OutboxProcessorDto> Handle(ProcessOutboxCommand request, CancellationToken cancellationToken)
     {
-        var items = await _outboxProcessor.ProcessPendingMessagesAsync(request.BatchSize, cancellationToken);
-        _logger.OutboxProcessingFinished(items);
-        return new OutboxProcessorDto(items);
+        _logger.LogInformation(
+            "Starting outbox processing. BatchSize={BatchSize}",
+            request.BatchSize);
+
+        try
+        {
+            var items = await _outboxProcessor.ProcessPendingMessagesAsync(request.BatchSize, cancellationToken);
+
+            _logger.OutboxProcessingFinished(items);
+
+            _logger.LogInformation(
+                "Outbox processing completed successfully. BatchSize={BatchSize}, ProcessedItems={ProcessedItems}",
+                request.BatchSize,
+                items);
+
+            return new OutboxProcessorDto(items);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning(
+                "Outbox processing was canceled. BatchSize={BatchSize}",
+                request.BatchSize);
+
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Unexpected error while processing outbox. BatchSize={BatchSize}",
+                request.BatchSize);
+
+            throw;
+        }
     }
 }
