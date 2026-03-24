@@ -45,11 +45,8 @@ public sealed class CreateTransactionFunction
         CancellationToken cancellationToken)
     {
         var payload = await request.ReadFromJsonAsync<CreateTransactionRequest>(cancellationToken: cancellationToken);
-
         var correlationId = context.GetCorrelationId();
-
         var idempotencyKey = context.GetIdempotencyKey();
-
         var command = new CreateTransactionCommand(
             payload!.AccountId,
             payload.Kind,
@@ -67,10 +64,6 @@ public sealed class CreateTransactionFunction
         var statusCode = result.IsIdempotentReplay
             ? HttpStatusCode.OK
             : HttpStatusCode.Created;
-
-
-   
-        
 
         var response = request.CreateResponse(statusCode);
 
