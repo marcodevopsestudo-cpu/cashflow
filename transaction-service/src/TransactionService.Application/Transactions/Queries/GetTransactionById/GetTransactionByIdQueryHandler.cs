@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using TransactionService.Application.Abstractions.Persistence;
 using TransactionService.Application.Common.Diagnostics;
 using TransactionService.Application.Common.Exceptions;
@@ -73,6 +74,8 @@ public sealed class GetTransactionByIdQueryHandler : IRequestHandler<GetTransact
 
             throw;
         }
+  
+
         catch (Exception ex)
         {
             _logger.LogError(
@@ -80,6 +83,25 @@ public sealed class GetTransactionByIdQueryHandler : IRequestHandler<GetTransact
                 "Unexpected error while retrieving transaction. TransactionId={TransactionId}",
                 request.TransactionId);
 
+            if (ex.InnerException is Npgsql.NpgsqlException npgsqlEx)
+            {
+                _logger.LogError(
+                    npgsqlEx,
+                    "Npgsql exception while saving transaction. Message={Message}",
+                    npgsqlEx.Message);
+            }
+
+            if (ex.InnerException is PostgresException pgEx)
+            {
+                _logger.LogError(
+                    pgEx,
+                    "Postgres exception while savingtransaction. SqlState={SqlState}, Detail={Detail}, ConstraintName={ConstraintName}, TableName={TableName}, ColumnName={ColumnName}",
+                    pgEx.SqlState,
+                    pgEx.Detail,
+                    pgEx.ConstraintName,
+                    pgEx.TableName,
+                    pgEx.ColumnName);
+            }
             throw;
         }
     }
