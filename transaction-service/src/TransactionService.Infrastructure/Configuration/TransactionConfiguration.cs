@@ -14,33 +14,46 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
             .HasColumnName("transaction_id");
 
         builder.Property(x => x.AccountId)
-            .HasColumnName("account_id");
+            .HasColumnName("account_id")
+            .IsRequired();
 
         builder.Property(x => x.Kind)
             .HasColumnName("kind")
-            .HasConversion<string>(); 
+            .HasConversion<string>()
+            .HasMaxLength(50)
+            .IsRequired();
 
         builder.Property(x => x.Amount)
-            .HasColumnName("amount");
+            .HasColumnName("amount")
+            .HasColumnType("numeric(18,2)");
 
         builder.Property(x => x.Currency)
-            .HasColumnName("currency");
+            .HasColumnName("currency")
+            .HasMaxLength(3)
+            .IsRequired();
 
         builder.Property(x => x.TransactionDateUtc)
-            .HasColumnName("transaction_date_utc");
+            .HasColumnName("transaction_date_utc")
+            .IsRequired();
 
         builder.Property(x => x.Description)
-            .HasColumnName("description");
+            .HasColumnName("description")
+            .HasMaxLength(500);
 
         builder.Property(x => x.CorrelationId)
-            .HasColumnName("correlation_id");
+            .HasColumnName("correlation_id")
+            .HasMaxLength(120)
+            .IsRequired();
 
         builder.Property(x => x.Status)
             .HasColumnName("status")
-            .HasConversion<string>(); 
+            .HasConversion<string>()
+            .HasMaxLength(50)
+            .IsRequired();
 
         builder.Property(x => x.CreatedAtUtc)
-            .HasColumnName("created_at_utc");
+            .HasColumnName("created_at_utc")
+            .IsRequired();
 
         builder.Property(x => x.UpdatedAtUtc)
             .HasColumnName("updated_at_utc");
