@@ -1,6 +1,4 @@
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
-using Moq;
 using TransactionService.Api.Configuration;
 using TransactionService.Api.Security;
 using Xunit;
@@ -12,6 +10,7 @@ namespace TransactionService.UnitTests.Api;
 /// </summary>
 public sealed class EntraAuthorizationEvaluatorTests
 {
+    private readonly EntraAuthorizationEvaluator _sut = new();
 
     /// <summary>
     /// Verifies that authorization is allowed when the feature is disabled.
@@ -19,13 +18,7 @@ public sealed class EntraAuthorizationEvaluatorTests
     [Fact]
     public void Evaluate_ShouldAllow_WhenFeatureIsDisabled()
     {
-
- 
-
-        var loggerMock = new Mock<ILogger<EntraAuthorizationEvaluator>>();
-        var evaluator = new EntraAuthorizationEvaluator(loggerMock.Object);
-
-        var decision = evaluator.Evaluate(
+        var decision = _sut.Evaluate(
             null,
             new EntraAuthorizationOptions
             {
@@ -42,11 +35,7 @@ public sealed class EntraAuthorizationEvaluatorTests
     [Fact]
     public void Evaluate_ShouldDeny_WhenPrincipalIsMissing()
     {
-
-        var loggerMock = new Mock<ILogger<EntraAuthorizationEvaluator>>();
-        var evaluator = new EntraAuthorizationEvaluator(loggerMock.Object);
-
-        var decision = evaluator.Evaluate(
+        var decision = _sut.Evaluate(
             null,
             new EntraAuthorizationOptions
             {
@@ -74,11 +63,7 @@ public sealed class EntraAuthorizationEvaluatorTests
             AllowedAppIds = ["client-b"]
         };
 
-
-        var loggerMock = new Mock<ILogger<EntraAuthorizationEvaluator>>();
-        var evaluator = new EntraAuthorizationEvaluator(loggerMock.Object);
-
-        var decision = evaluator.Evaluate(principal, options);
+        var decision = _sut.Evaluate(principal, options);
 
         decision.IsAllowed.Should().BeFalse();
         decision.FailureReason.Should().Be(AuthorizationFailureReason.AppIdNotAllowed);
@@ -104,11 +89,7 @@ public sealed class EntraAuthorizationEvaluatorTests
             RequiredRoles = ["transactions.write"]
         };
 
-
-        var loggerMock = new Mock<ILogger<EntraAuthorizationEvaluator>>();
-        var evaluator = new EntraAuthorizationEvaluator(loggerMock.Object);
-
-        var decision = evaluator.Evaluate(principal, options);
+        var decision = _sut.Evaluate(principal, options);
 
         decision.IsAllowed.Should().BeTrue();
         decision.Principal.Should().NotBeNull();
