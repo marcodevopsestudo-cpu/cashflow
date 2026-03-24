@@ -9,7 +9,7 @@ namespace TransactionService.Api.Security;
 /// </summary>
 public sealed class EntraAuthorizationEvaluator
 {
-   
+  
     /// <summary>
     /// Evaluates the provided caller principal against the configured authorization rules.
     /// </summary>
@@ -25,6 +25,8 @@ public sealed class EntraAuthorizationEvaluator
     public AuthorizationDecision Evaluate(CallerPrincipal? principal, EntraAuthorizationOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+
+      
 
         if (!options.Enabled)
         {
