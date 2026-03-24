@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using System.Text.Json;
 using TransactionService.Application.Abstractions.Idempotency;
+using TransactionService.Application.Abstractions.Messaging;
 using TransactionService.Application.Abstractions.Persistence;
 using TransactionService.Application.Common.Diagnostics;
 using TransactionService.Application.Common.Exceptions;
@@ -54,17 +55,21 @@ public sealed class CreateTransactionCommandHandler(
     {
         var requestHash = _requestHashService.ComputeHash(request);
 
+        
         _logger.CreateTransactionStarted(request.AccountId, request.CorrelationId, request.IdempotencyKey);
-
+        
         var existing = await _idempotencyRepository.GetByKeyAsync(request.IdempotencyKey, cancellationToken);
 
         if (existing is not null)
         {
+            _logger.LogInformation("Idempotency already exists");
             return await HandleExistingAsync(existing, requestHash, request, cancellationToken);
         }
 
-        var idempotencyEntry = IdempotencyEntry.Create(request.IdempotencyKey, requestHash);
 
+        _logger.LogInformation("will create idempotency");
+        var idempotencyEntry = IdempotencyEntry.Create(request.IdempotencyKey, requestHash);
+        _logger.LogInformation($"idempotency createated { JsonSerializer.Serialize(idempotencyEntry, SerializerOptions)}");
         var kind = ParseKind(request.Kind);
 
         var transaction = Transaction.Create(
