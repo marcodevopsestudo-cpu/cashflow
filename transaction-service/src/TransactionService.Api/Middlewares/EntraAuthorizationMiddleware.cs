@@ -67,7 +67,16 @@ public sealed class EntraAuthorizationMiddleware : IFunctionsWorkerMiddleware
             return;
         }
 
-        var principal = CallerPrincipalParser.Parse(request);
+        CallerPrincipal? principal = null;
+
+        try
+        {
+            principal = CallerPrincipalParser.Parse(request);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse caller principal.");
+        }
         var decision = _evaluator.Evaluate(principal, _options.Value);
         var correlationId = context.GetCorrelationId();
 

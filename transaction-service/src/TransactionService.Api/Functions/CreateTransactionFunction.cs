@@ -66,6 +66,8 @@ public sealed class CreateTransactionFunction
             ? HttpStatusCode.OK
             : HttpStatusCode.Created;
 
+
+
         var response = request.CreateResponse(statusCode);
 
         // Idempotency headers
