@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Logging;
 using TransactionService.Api.Configuration;
+using TransactionService.Api.Middlewares;
 
 namespace TransactionService.Api.Security;
 
@@ -8,6 +10,12 @@ namespace TransactionService.Api.Security;
 /// </summary>
 public sealed class EntraAuthorizationEvaluator
 {
+    private readonly ILogger<EntraAuthorizationEvaluator> _logger;
+
+    public EntraAuthorizationEvaluator(ILogger<EntraAuthorizationEvaluator> logger)
+    {
+        _logger = logger;
+    }
     /// <summary>
     /// Evaluates the provided caller principal against the configured authorization rules.
     /// </summary>
@@ -23,6 +31,8 @@ public sealed class EntraAuthorizationEvaluator
     public AuthorizationDecision Evaluate(CallerPrincipal? principal, EntraAuthorizationOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+
+        _logger.Log(LogLevel.Information, $"Audiencie {principal?.Audience?.ToString()}");
 
         if (!options.Enabled)
         {
