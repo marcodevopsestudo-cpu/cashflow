@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using TransactionService.Api.Configuration;
-using TransactionService.Api.Middlewares;
 
 namespace TransactionService.Api.Security;
 

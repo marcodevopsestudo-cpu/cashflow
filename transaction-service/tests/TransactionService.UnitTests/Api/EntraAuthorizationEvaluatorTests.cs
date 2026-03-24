@@ -1,4 +1,6 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
 using TransactionService.Api.Configuration;
 using TransactionService.Api.Security;
 using Xunit;
@@ -10,7 +12,6 @@ namespace TransactionService.UnitTests.Api;
 /// </summary>
 public sealed class EntraAuthorizationEvaluatorTests
 {
-    private readonly EntraAuthorizationEvaluator _sut = new();
 
     /// <summary>
     /// Verifies that authorization is allowed when the feature is disabled.
@@ -18,7 +19,13 @@ public sealed class EntraAuthorizationEvaluatorTests
     [Fact]
     public void Evaluate_ShouldAllow_WhenFeatureIsDisabled()
     {
-        var decision = _sut.Evaluate(
+
+ 
+
+        var loggerMock = new Mock<ILogger<EntraAuthorizationEvaluator>>();
+        var evaluator = new EntraAuthorizationEvaluator(loggerMock.Object);
+
+        var decision = evaluator.Evaluate(
             null,
             new EntraAuthorizationOptions
             {
@@ -35,7 +42,11 @@ public sealed class EntraAuthorizationEvaluatorTests
     [Fact]
     public void Evaluate_ShouldDeny_WhenPrincipalIsMissing()
     {
-        var decision = _sut.Evaluate(
+
+        var loggerMock = new Mock<ILogger<EntraAuthorizationEvaluator>>();
+        var evaluator = new EntraAuthorizationEvaluator(loggerMock.Object);
+
+        var decision = evaluator.Evaluate(
             null,
             new EntraAuthorizationOptions
             {
@@ -46,52 +57,60 @@ public sealed class EntraAuthorizationEvaluatorTests
         decision.FailureReason.Should().Be(AuthorizationFailureReason.MissingPrincipal);
     }
 
-    //[Fact]
-    //public void Evaluate_ShouldDeny_WhenAppIdIsNotAllowed()
-    //{
-    //    var principal = new CallerPrincipal(
-    //        "client-a",
-    //        "tenant-1",
-    //        "api://transaction-service",
-    //        "https://sts.windows.net/tenant-1/",
-    //        ["transactions.write"],
-    //        []);
-    //
-    //    var options = new EntraAuthorizationOptions
-    //    {
-    //        Enabled = true,
-    //        AllowedAppIds = ["client-b"]
-    //    };
-    //
-    //    var decision = _sut.Evaluate(principal, options);
-    //
-    //    decision.IsAllowed.Should().BeFalse();
-    //    decision.FailureReason.Should().Be(AuthorizationFailureReason.AppIdNotAllowed);
-    //}
+    [Fact]
+    public void Evaluate_ShouldDeny_WhenAppIdIsNotAllowed()
+    {
+        var principal = new CallerPrincipal(
+            "client-a",
+            "tenant-1",
+            "api://transaction-service",
+            "https://sts.windows.net/tenant-1/",
+            ["transactions.write"],
+            []);
 
-    //[Fact]
-    //public void Evaluate_ShouldAllow_WhenAllRulesMatch()
-    //{
-    //    var principal = new CallerPrincipal(
-    //        "client-a",
-    //        "tenant-1",
-    //        "api://transaction-service",
-    //        "https://sts.windows.net/tenant-1/",
-    //        ["transactions.write"],
-    //        []);
-    //
-    //    var options = new EntraAuthorizationOptions
-    //    {
-    //        Enabled = true,
-    //        AllowedAppIds = ["client-a"],
-    //        AllowedAudiences = ["api://transaction-service"],
-    //        AllowedIssuers = ["https://sts.windows.net/tenant-1/"],
-    //        RequiredRoles = ["transactions.write"]
-    //    };
-    //
-    //    var decision = _sut.Evaluate(principal, options);
-    //
-    //    decision.IsAllowed.Should().BeTrue();
-    //    decision.Principal.Should().NotBeNull();
-    //}
+        var options = new EntraAuthorizationOptions
+        {
+            Enabled = true,
+            AllowedAppIds = ["client-b"]
+        };
+
+
+        var loggerMock = new Mock<ILogger<EntraAuthorizationEvaluator>>();
+        var evaluator = new EntraAuthorizationEvaluator(loggerMock.Object);
+
+        var decision = evaluator.Evaluate(principal, options);
+
+        decision.IsAllowed.Should().BeFalse();
+        decision.FailureReason.Should().Be(AuthorizationFailureReason.AppIdNotAllowed);
+    }
+
+    [Fact]
+    public void Evaluate_ShouldAllow_WhenAllRulesMatch()
+    {
+        var principal = new CallerPrincipal(
+            "client-a",
+            "tenant-1",
+            "api://transaction-service",
+            "https://sts.windows.net/tenant-1/",
+            ["transactions.write"],
+            []);
+
+        var options = new EntraAuthorizationOptions
+        {
+            Enabled = true,
+            AllowedAppIds = ["client-a"],
+            AllowedAudiences = ["api://transaction-service"],
+            AllowedIssuers = ["https://sts.windows.net/tenant-1/"],
+            RequiredRoles = ["transactions.write"]
+        };
+
+
+        var loggerMock = new Mock<ILogger<EntraAuthorizationEvaluator>>();
+        var evaluator = new EntraAuthorizationEvaluator(loggerMock.Object);
+
+        var decision = evaluator.Evaluate(principal, options);
+
+        decision.IsAllowed.Should().BeTrue();
+        decision.Principal.Should().NotBeNull();
+    }
 }
