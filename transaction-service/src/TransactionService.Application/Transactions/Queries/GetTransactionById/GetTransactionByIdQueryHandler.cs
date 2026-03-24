@@ -35,14 +35,52 @@ public sealed class GetTransactionByIdQueryHandler : IRequestHandler<GetTransact
     /// <returns>The transaction DTO.</returns>
     public async Task<TransactionDto> Handle(GetTransactionByIdQuery request, CancellationToken cancellationToken)
     {
-        var transaction = await _repository.GetByIdAsync(request.TransactionId, cancellationToken);
+        _logger.LogInformation(
+            "Getting transaction by id. TransactionId={TransactionId}",
+            request.TransactionId);
 
-        if (transaction is null)
+        try
         {
-            _logger.TransactionNotFound(request.TransactionId);
-            throw new EntityNotFoundApplicationException(string.Format(MessageCatalog.TransactionNotFound, request.TransactionId));
-        }
+            var transaction = await _repository.GetByIdAsync(request.TransactionId, cancellationToken);
 
-        return transaction.ToDto();
+            if (transaction is null)
+            {
+                _logger.TransactionNotFound(request.TransactionId);
+
+                _logger.LogWarning(
+                    "Transaction not found. TransactionId={TransactionId}",
+                    request.TransactionId);
+
+                throw new EntityNotFoundApplicationException(
+                    string.Format(MessageCatalog.TransactionNotFound, request.TransactionId));
+            }
+
+            _logger.LogInformation(
+                "Transaction retrieved successfully. TransactionId={TransactionId}, AccountId={AccountId}, Amount={Amount}, Currency={Currency}, Kind={Kind}",
+                transaction.TransactionId,
+                transaction.AccountId,
+                transaction.Amount,
+                transaction.Currency,
+                transaction.Kind);
+
+            return transaction.ToDto();
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning(
+                "GetTransactionById was canceled. TransactionId={TransactionId}",
+                request.TransactionId);
+
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Unexpected error while retrieving transaction. TransactionId={TransactionId}",
+                request.TransactionId);
+
+            throw;
+        }
     }
 }
