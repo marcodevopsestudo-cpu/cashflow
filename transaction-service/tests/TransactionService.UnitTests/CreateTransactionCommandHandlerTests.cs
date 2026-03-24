@@ -105,7 +105,7 @@ public sealed class CreateTransactionCommandHandlerTests
             "corr-original");
 
         var entry = IdempotencyEntry.Create("idem-1", "hash-1");
-        entry.Complete(persistedTransaction.Id);
+        entry.Complete(persistedTransaction.TransactionId);
 
         requestHashService
             .Setup(x => x.ComputeHash(It.IsAny<CreateTransactionCommand>()))
@@ -116,7 +116,7 @@ public sealed class CreateTransactionCommandHandlerTests
             .ReturnsAsync(entry);
 
         repository
-            .Setup(x => x.GetByIdAsync(persistedTransaction.Id, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetByIdAsync(persistedTransaction.TransactionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(persistedTransaction);
 
         var handler = new CreateTransactionCommandHandler(
@@ -140,7 +140,7 @@ public sealed class CreateTransactionCommandHandlerTests
 
         // Assert
         result.IsIdempotentReplay.Should().BeTrue();
-        result.Transaction.Id.Should().Be(persistedTransaction.Id);
+        result.Transaction.Id.Should().Be(persistedTransaction.TransactionId);
         result.Transaction.CorrelationId.Should().Be("corr-original");
 
         repository.Verify(x => x.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()), Times.Never);

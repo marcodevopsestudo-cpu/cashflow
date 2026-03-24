@@ -31,7 +31,7 @@ public sealed class TransactionEntityTests
             "corr-123");
 
         // Assert
-        transaction.Id.Should().NotBeEmpty();
+        transaction.TransactionId.Should().NotBeEmpty();
         transaction.Status.Should().Be(TransactionStatus.Received);
 
         transaction.TransactionDateUtc.Kind.Should().Be(DateTimeKind.Utc);

@@ -48,8 +48,8 @@ public sealed class TransactionDbContext(DbContextOptions<TransactionDbContext> 
         modelBuilder.Entity<Transaction>(builder =>
         {
             builder.ToTable("transactions", "transaction");
-            builder.HasKey(x => x.Id);
-            builder.Property(x => x.Id).HasColumnName("transaction_id");
+            builder.HasKey(x => x.TransactionId);
+            builder.Property(x => x.TransactionId).HasColumnName("transaction_id");
             builder.Property(x => x.AccountId).HasColumnName("account_id").HasMaxLength(100).IsRequired();
             builder.Property(x => x.Kind).HasColumnName("kind").HasConversion<string>().HasMaxLength(20).IsRequired();
             builder.Property(x => x.Amount).HasColumnName("amount").HasPrecision(18, 2).IsRequired();

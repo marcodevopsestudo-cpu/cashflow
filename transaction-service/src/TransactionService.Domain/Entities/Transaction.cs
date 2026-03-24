@@ -12,7 +12,7 @@ public sealed class Transaction
     /// <summary>
     /// Gets the transaction identifier.
     /// </summary>
-    public Guid Id { get; private set; }
+    public Guid TransactionId { get; private set; }
 
     /// <summary>
     /// Gets the account identifier.
@@ -86,7 +86,7 @@ public sealed class Transaction
     {
         return new Transaction
         {
-            Id = Guid.NewGuid(),
+            TransactionId = Guid.NewGuid(),
             AccountId = accountId,
             Kind = kind,
             Amount = amount,

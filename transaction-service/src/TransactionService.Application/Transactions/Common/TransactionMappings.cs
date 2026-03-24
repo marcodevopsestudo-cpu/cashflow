@@ -15,7 +15,7 @@ public static class TransactionMappings
     public static TransactionDto ToDto(this Transaction transaction)
     {
         return new TransactionDto(
-            transaction.Id,
+            transaction.TransactionId,
             transaction.AccountId,
             transaction.Kind,
             transaction.Amount,
