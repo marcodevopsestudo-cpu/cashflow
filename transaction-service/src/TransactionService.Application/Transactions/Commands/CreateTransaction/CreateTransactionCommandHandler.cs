@@ -67,9 +67,9 @@ public sealed class CreateTransactionCommandHandler(
         }
 
 
-        _logger.LogInformation("will create idempotency");
+        
         var idempotencyEntry = IdempotencyEntry.Create(request.IdempotencyKey, requestHash);
-        _logger.LogInformation($"idempotency createated { JsonSerializer.Serialize(idempotencyEntry, SerializerOptions)}");
+        
         var kind = ParseKind(request.Kind);
 
         var transaction = Transaction.Create(
@@ -103,6 +103,11 @@ public sealed class CreateTransactionCommandHandler(
             payload,
             integrationEvent.CorrelationId,
             integrationEvent.OccurredOnUtc);
+
+
+        _logger.LogInformation($"idempotencyEntry : {JsonSerializer.Serialize(idempotencyEntry, SerializerOptions)}");
+        _logger.LogInformation($"transaction : {JsonSerializer.Serialize(transaction, SerializerOptions)}");
+        _logger.LogInformation($"outboxMessage : {JsonSerializer.Serialize(outboxMessage, SerializerOptions)}");
 
         await _idempotencyRepository.AddAsync(idempotencyEntry, cancellationToken);
         await _repository.AddAsync(transaction, cancellationToken);
