@@ -46,7 +46,7 @@ public sealed class TransactionRepository : ITransactionRepository
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The transaction or null.</returns>
     public Task<Transaction?> GetByIdAsync(Guid transactionId, CancellationToken cancellationToken)
-        => _dbContext.Transactions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == transactionId, cancellationToken);
+        => _dbContext.Transactions.AsNoTracking().FirstOrDefaultAsync(x => x.TransactionId == transactionId, cancellationToken);
 
     /// <summary>
     /// Gets a transaction for update tracking.
@@ -55,5 +55,5 @@ public sealed class TransactionRepository : ITransactionRepository
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The tracked transaction or null.</returns>
     public Task<Transaction?> GetForUpdateAsync(Guid transactionId, CancellationToken cancellationToken)
-        => _dbContext.Transactions.FirstOrDefaultAsync(x => x.Id == transactionId, cancellationToken);
+        => _dbContext.Transactions.FirstOrDefaultAsync(x => x.TransactionId == transactionId, cancellationToken);
 }

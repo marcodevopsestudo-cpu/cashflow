@@ -83,7 +83,7 @@ public sealed class CreateTransactionCommandHandler(
 
         var integrationEvent = new TransactionCreatedIntegrationEvent(
             Guid.NewGuid(),
-            transaction.Id,
+            transaction.TransactionId,
             transaction.AccountId,
             transaction.Kind,
             transaction.Amount,
@@ -109,11 +109,13 @@ public sealed class CreateTransactionCommandHandler(
         _logger.LogInformation($"transaction : {JsonSerializer.Serialize(transaction, SerializerOptions)}");
         _logger.LogInformation($"outboxMessage : {JsonSerializer.Serialize(outboxMessage, SerializerOptions)}");
 
+
+        
         await _idempotencyRepository.AddAsync(idempotencyEntry, cancellationToken);
         await _repository.AddAsync(transaction, cancellationToken);
         await _outboxRepository.AddAsync(outboxMessage, cancellationToken);
 
-        idempotencyEntry.Complete(transaction.Id);
+        idempotencyEntry.Complete(transaction.TransactionId);
         await _idempotencyRepository.UpdateAsync(idempotencyEntry, cancellationToken);
 
         try
@@ -132,7 +134,7 @@ public sealed class CreateTransactionCommandHandler(
             return await HandleExistingAsync(concurrentEntry, requestHash,  request, cancellationToken);
         }
 
-        _logger.CreateTransactionPersisted(transaction.Id, outboxMessage.Id, request.CorrelationId);
+        _logger.CreateTransactionPersisted(transaction.TransactionId, outboxMessage.Id, request.CorrelationId);
 
         return new CreateTransactionResult(transaction.ToDto(), false);
     }
