@@ -1,8 +1,10 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using TransactionService.Application.Abstractions.Messaging;
 using TransactionService.Application.Common.Diagnostics;
 using TransactionService.Application.Transactions.Common;
+using TransactionService.Domain.Entities;
 
 namespace TransactionService.Application.Transactions.Commands.ProcessOutBox;
 
@@ -49,12 +51,34 @@ public sealed class ProcessOutboxCommandHandler(
 
             throw;
         }
+ 
+
         catch (Exception ex)
         {
             _logger.LogError(
                 ex,
-                "Unexpected error while processing outbox. BatchSize={BatchSize}",
-                request.BatchSize);
+                "Unexpected error while saving outbox message. CorrelationId={CorrelationId} ",
+                request.CorrelationId);
+
+            if (ex.InnerException is Npgsql.NpgsqlException npgsqlEx)
+            {
+                _logger.LogError(
+                    npgsqlEx,
+                    "Npgsql exception while saving transaction. Message={Message}",
+                    npgsqlEx.Message);
+            }
+
+            if (ex.InnerException is PostgresException pgEx)
+            {
+                _logger.LogError(
+                    pgEx,
+                    "Postgres exception while saving outbox messag. SqlState={SqlState}, Detail={Detail}, ConstraintName={ConstraintName}, TableName={TableName}, ColumnName={ColumnName}",
+                    pgEx.SqlState,
+                    pgEx.Detail,
+                    pgEx.ConstraintName,
+                    pgEx.TableName,
+                    pgEx.ColumnName);
+            }
 
             throw;
         }

@@ -273,12 +273,13 @@ public sealed class CreateTransactionCommandHandler(
             throw;
         }
 
+        _logger.LogInformation("Before CreateTransactionPersisted");
         _logger.CreateTransactionPersisted(transaction.TransactionId, outboxMessage.Id, request.CorrelationId);
-        _logger.LogInformation(
-            "CreateTransaction completed successfully. TransactionId={TransactionId}, CorrelationId={CorrelationId}, Replay={Replay}",
-            transaction.TransactionId,
-            request.CorrelationId,
-            false);
+        _logger.LogInformation("After CreateTransactionPersisted");
+
+        _logger.LogInformation("Before ToDto");
+        var dto = transaction.ToDto();
+        _logger.LogInformation("After ToDto");
 
         return new CreateTransactionResult(transaction.ToDto(), false);
     }
