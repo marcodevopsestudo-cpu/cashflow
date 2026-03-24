@@ -6,12 +6,12 @@ namespace TransactionService.Application.Transactions.Common;
 /// Represents a transaction DTO.
 /// </summary>
 public sealed record TransactionDto(
-    Guid TransactionId,
+    Guid Id,
     string AccountId,
     TransactionKind Kind,
     decimal Amount,
     string Currency,
-    DateTime TransactionDateUtc,
+    DateTime DateUtc,
     string? Description,
     string Status,
     string CorrelationId,

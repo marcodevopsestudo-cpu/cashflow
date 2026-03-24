@@ -40,37 +40,47 @@ public sealed class CreateTransactionFunction
     /// <returns>The HTTP response.</returns>
     [Function(nameof(CreateTransactionFunction))]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "transactions")] HttpRequestData request,
-        FunctionContext context,
-        CancellationToken cancellationToken)
+    HttpRequestData request,
+    FunctionContext context,
+    CancellationToken cancellationToken)
     {
         var payload = await request.ReadFromJsonAsync<CreateTransactionRequest>(cancellationToken: cancellationToken);
 
-        if (payload is null)
-        {
-            return await request.CreateErrorResponseAsync(HttpStatusCode.BadRequest, ApiMessageCatalog.ValidationErrorCode, ApiMessageCatalog.RequestBodyRequired, null, cancellationToken);
-        }
-
         var correlationId = context.GetCorrelationId();
 
-        var idempotencyKey = context.GetIdempotencyKey()
-            ?? throw new InvalidOperationException(ApiMessageCatalog.IdempotencyKeyNotResolved);
+        var idempotencyKey = context.GetIdempotencyKey();
 
-        var result = await _mediator.Send(new CreateTransactionCommand(
-            payload.AccountId,
+        var command = new CreateTransactionCommand(
+            payload!.AccountId,
             payload.Kind,
             payload.Amount,
             payload.Currency,
             payload.TransactionDateUtc,
             payload.Description,
-            correlationId,
-            idempotencyKey), cancellationToken);
+            correlationId!,
+            idempotencyKey!);
 
-        var response = await request.CreateJsonResponseAsync(HttpStatusCode.Created, result.Transaction.ToResponse(), cancellationToken);
-        response.Headers.Add(IdempotencyConstants.IdempotencyReplayedHeaderName, result.IsIdempotentReplay.ToString().ToLowerInvariant());
-        response.Headers.Add(IdempotencyConstants.IdempotencyHeaderName, idempotencyKey);
+        var result = await _mediator.Send(command, cancellationToken);
 
-        _logger.CreateTransactionFunctionCompleted(result.Transaction.TransactionId, correlationId, result.IsIdempotentReplay);
+        var statusCode = result.IsIdempotentReplay
+            ? HttpStatusCode.OK
+            : HttpStatusCode.Created;
+
+        var response = request.CreateResponse(statusCode);
+
+        // Idempotency headers
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            response.Headers.Add(IdempotencyConstants.IdempotencyHeaderName, idempotencyKey);
+        }
+
+        if (result.IsIdempotentReplay)
+        {
+            response.Headers.Add(IdempotencyConstants.IdempotencyReplayedHeaderName, "true");
+        }
+
+        await response.WriteAsJsonAsync(result, cancellationToken);
+        _logger.CreateTransactionFunctionCompleted(result.Transaction.Id, correlationId, result.IsIdempotentReplay);
 
         return response;
     }
