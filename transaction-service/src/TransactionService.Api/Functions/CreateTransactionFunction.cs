@@ -40,9 +40,9 @@ public sealed class CreateTransactionFunction
     /// <returns>The HTTP response.</returns>
     [Function(nameof(CreateTransactionFunction))]
     public async Task<HttpResponseData> Run(
-    HttpRequestData request,
-    FunctionContext context,
-    CancellationToken cancellationToken)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "transactions")] HttpRequestData request,
+        FunctionContext context,
+        CancellationToken cancellationToken)
     {
         var payload = await request.ReadFromJsonAsync<CreateTransactionRequest>(cancellationToken: cancellationToken);
 
