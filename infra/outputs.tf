@@ -68,5 +68,5 @@ output "postman_client_id" {
 
 output "postman_client_secret" {
   value     = module.entra_postman_client_app.client_secret
-  sensitive = true
+   sensitive = true
 }
