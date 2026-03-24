@@ -25,7 +25,7 @@ public sealed class PingFunction
         ArgumentNullException.ThrowIfNull(request);
 
         var response = request.CreateResponse(HttpStatusCode.OK);
-        response.WriteString(ResponseMessage);
+        response.WriteStringAsync(ResponseMessage);
 
         return response;
     }

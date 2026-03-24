@@ -21,7 +21,7 @@ public static class HttpRequestDataExtensions
     public static async Task<HttpResponseData> CreateJsonResponseAsync<T>(this HttpRequestData request, HttpStatusCode statusCode, T payload, CancellationToken cancellationToken)
     {
         var response = request.CreateResponse(statusCode);
-        await response.WriteAsJsonAsync(payload, cancellationToken);
+        await response.WriteAsJsonAsync(payload,statusCode, cancellationToken);
         return response;
     }
 
