@@ -2,6 +2,7 @@ using FluentAssertions;
 using TransactionService.Api.Common.Constants;
 using TransactionService.Api.Common.Extensions;
 using Xunit;
+using static TransactionService.UnitTests.Api.CreateTransactionFunctionTests;
 
 namespace TransactionService.UnitTests.Api;
 

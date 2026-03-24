@@ -14,5 +14,5 @@ public static class TransactionDtoExtensions
     /// <param name="dto">The DTO.</param>
     /// <returns>The response.</returns>
     public static TransactionResponse ToResponse(this TransactionDto dto)
-        => new(dto.TransactionId, dto.AccountId, dto.Kind, dto.Amount, dto.Currency, dto.TransactionDateUtc, dto.Description, dto.Status, dto.CorrelationId, dto.CreatedAtUtc, dto.UpdatedAtUtc);
+        => new(dto.Id, dto.AccountId, dto.Kind, dto.Amount, dto.Currency, dto.DateUtc, dto.Description, dto.Status, dto.CorrelationId, dto.CreatedAtUtc, dto.UpdatedAtUtc);
 }

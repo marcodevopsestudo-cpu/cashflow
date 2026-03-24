@@ -140,7 +140,7 @@ public sealed class CreateTransactionCommandHandlerTests
 
         // Assert
         result.IsIdempotentReplay.Should().BeTrue();
-        result.Transaction.TransactionId.Should().Be(persistedTransaction.Id);
+        result.Transaction.Id.Should().Be(persistedTransaction.Id);
         result.Transaction.CorrelationId.Should().Be("corr-original");
 
         repository.Verify(x => x.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()), Times.Never);
