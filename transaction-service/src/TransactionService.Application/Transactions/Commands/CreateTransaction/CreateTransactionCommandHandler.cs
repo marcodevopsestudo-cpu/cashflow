@@ -250,6 +250,26 @@ public sealed class CreateTransactionCommandHandler(
                 transaction.TransactionId,
                 outboxMessage.Id);
 
+            if (ex.InnerException is Npgsql.NpgsqlException npgsqlEx)
+            {
+                _logger.LogError(
+                    npgsqlEx,
+                    "Npgsql exception while saving transaction. Message={Message}",
+                    npgsqlEx.Message);
+            }
+
+            if (ex.InnerException is PostgresException pgEx)
+            {
+                _logger.LogError(
+                    pgEx,
+                    "Postgres exception while saving transaction. SqlState={SqlState}, Detail={Detail}, ConstraintName={ConstraintName}, TableName={TableName}, ColumnName={ColumnName}",
+                    pgEx.SqlState,
+                    pgEx.Detail,
+                    pgEx.ConstraintName,
+                    pgEx.TableName,
+                    pgEx.ColumnName);
+            }
+
             throw;
         }
 
