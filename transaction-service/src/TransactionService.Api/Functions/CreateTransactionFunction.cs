@@ -62,11 +62,15 @@ public sealed class CreateTransactionFunction
 
         var result = await _mediator.Send(command, cancellationToken);
 
+        _logger.LogInformation("Passou pelo Send");
+
         var statusCode = result.IsIdempotentReplay
             ? HttpStatusCode.OK
             : HttpStatusCode.Created;
 
 
+   
+        
 
         var response = request.CreateResponse(statusCode);
 
@@ -81,13 +85,15 @@ public sealed class CreateTransactionFunction
             response.Headers.Add(IdempotencyConstants.IdempotencyReplayedHeaderName, "true");
         }
 
+
+        _logger.LogInformation("Add headers");
+
         await response.WriteAsJsonAsync(result, statusCode, cancellationToken);
 
+        _logger.LogInformation("write response as json");
+
         _logger.CreateTransactionFunctionCompleted(result.Transaction.Id, correlationId, result.IsIdempotentReplay);
-        _logger.LogInformation(
-    "CreateTransaction response generated. TransactionId={TransactionId}, Replay={Replay}",
-    result.Transaction.Id,
-    result.IsIdempotentReplay);
+        
         return response;
     }
 }
