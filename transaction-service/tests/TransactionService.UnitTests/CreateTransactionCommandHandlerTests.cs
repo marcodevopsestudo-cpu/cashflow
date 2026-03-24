@@ -69,7 +69,7 @@ public sealed class CreateTransactionCommandHandlerTests
             x.AddAsync(It.IsAny<IdempotencyEntry>(), It.IsAny<CancellationToken>()), Times.Once);
 
         idempotencyRepository.Verify(x =>
-            x.UpdateAsync(It.IsAny<IdempotencyEntry>(), It.IsAny<CancellationToken>()), Times.Once);
+            x.UpdateAsync(It.IsAny<IdempotencyEntry>(), It.IsAny<CancellationToken>()), Times.Never);
 
         repository.Verify(x =>
             x.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -145,6 +145,7 @@ public sealed class CreateTransactionCommandHandlerTests
 
         repository.Verify(x => x.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()), Times.Never);
         outboxRepository.Verify(x => x.AddAsync(It.IsAny<OutboxMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+        idempotencyRepository.Verify(x => x.UpdateAsync(It.IsAny<IdempotencyEntry>(), It.IsAny<CancellationToken>()), Times.Never);
         unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 

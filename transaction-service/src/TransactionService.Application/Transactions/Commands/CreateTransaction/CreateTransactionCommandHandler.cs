@@ -36,6 +36,8 @@ public sealed class CreateTransactionCommandHandler(
     IUnitOfWork unitOfWork,
     ILogger<CreateTransactionCommandHandler> logger) : IRequestHandler<CreateTransactionCommand, CreateTransactionResult>
 {
+    private const string IdempotencyKeyConstraintName = "ux_idempotency_entries_key";
+
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     private readonly ITransactionRepository _repository = repository;
@@ -188,12 +190,6 @@ public sealed class CreateTransactionCommandHandler(
             idempotencyEntry.IdempotencyKey,
             transaction.TransactionId);
 
-        await _idempotencyRepository.UpdateAsync(idempotencyEntry, cancellationToken);
-        _logger.LogInformation(
-            "Idempotency entry scheduled for update. IdempotencyKey={IdempotencyKey}, TransactionId={TransactionId}",
-            idempotencyEntry.IdempotencyKey,
-            transaction.TransactionId);
-
         try
         {
             _logger.LogInformation(
@@ -211,7 +207,7 @@ public sealed class CreateTransactionCommandHandler(
                 transaction.TransactionId,
                 outboxMessage.Id);
         }
-        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        catch (DbUpdateException ex) when (IsIdempotencyKeyViolation(ex))
         {
             _logger.LogWarning(
                 ex,
@@ -250,7 +246,7 @@ public sealed class CreateTransactionCommandHandler(
                 transaction.TransactionId,
                 outboxMessage.Id);
 
-            if (ex.InnerException is Npgsql.NpgsqlException npgsqlEx)
+            if (ex.InnerException is NpgsqlException npgsqlEx)
             {
                 _logger.LogError(
                     npgsqlEx,
@@ -281,8 +277,9 @@ public sealed class CreateTransactionCommandHandler(
         var dto = transaction.ToDto();
         _logger.LogInformation("After ToDto");
 
-        return new CreateTransactionResult(transaction.ToDto(), false);
+        return new CreateTransactionResult(dto, false);
     }
+
     private async Task<CreateTransactionResult> HandleExistingAsync(
         IdempotencyEntry existing,
         string requestHash,
@@ -309,10 +306,11 @@ public sealed class CreateTransactionCommandHandler(
         return new CreateTransactionResult(transaction.ToDto(), true);
     }
 
-    private static bool IsUniqueViolation(DbUpdateException exception)
+    private static bool IsIdempotencyKeyViolation(DbUpdateException exception)
     {
         return exception.InnerException is PostgresException postgresException &&
-               postgresException.SqlState == PostgresErrorCodes.UniqueViolation;
+               postgresException.SqlState == PostgresErrorCodes.UniqueViolation &&
+               string.Equals(postgresException.ConstraintName, IdempotencyKeyConstraintName, StringComparison.Ordinal);
     }
 
     private static TransactionKind ParseKind(string kind)

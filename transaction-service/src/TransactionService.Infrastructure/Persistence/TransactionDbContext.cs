@@ -45,10 +45,7 @@ public sealed class TransactionDbContext(DbContextOptions<TransactionDbContext> 
     /// <param name="modelBuilder">The model builder.</param>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(TransactionConfiguration).Assembly);
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(IdempotencyEntryConfiguration).Assembly);
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(OutboxMessageConfiguration).Assembly);
-
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(TransactionDbContext).Assembly);
         base.OnModelCreating(modelBuilder);
     }
 }
