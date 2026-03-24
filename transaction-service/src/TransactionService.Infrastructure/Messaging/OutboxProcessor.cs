@@ -54,8 +54,19 @@ public sealed class OutboxProcessor : IOutboxProcessor
             return 0;
         }
 
+        _logger.LogInformation(
+            "Pending outbox messages retrieved. Count={Count}, BatchSize={BatchSize}, MessageIds={MessageIds}",
+            messages.Count,
+            batchSize,
+            string.Join(",", messages.Select(message => message.Id)));
+
         var publishChunkSize = Math.Min(batchSize, DefaultPublishChunkSize);
         var processedCount = 0;
+
+        _logger.LogInformation(
+            "Starting grouped outbox processing. PublishChunkSize={PublishChunkSize}, TotalMessages={TotalMessages}",
+            publishChunkSize,
+            messages.Count);
 
         foreach (var group in messages.Chunk(publishChunkSize))
         {
@@ -63,6 +74,12 @@ public sealed class OutboxProcessor : IOutboxProcessor
         }
 
         _logger.LogInformation(OutboxMessageCatalog.ProcessingFinished, processedCount);
+
+        _logger.LogInformation(
+            "Outbox grouped processing finished. TotalMessages={TotalMessages}, SuccessfullyProcessed={SuccessfullyProcessed}, Remaining={Remaining}",
+            messages.Count,
+            processedCount,
+            messages.Count - processedCount);
 
         return processedCount;
     }
@@ -80,9 +97,30 @@ public sealed class OutboxProcessor : IOutboxProcessor
     {
         var batchEvent = MapToBatchIntegrationEvent(messages);
 
+        _logger.LogInformation(
+            "Processing outbox batch. Count={Count}, MessageIds={MessageIds}, CorrelationIds={CorrelationIds}",
+            messages.Count,
+            string.Join(",", messages.Select(message => message.Id)),
+            string.Join(",", messages.Select(message => message.CorrelationId)));
+
         try
         {
+            _logger.LogDebug(
+                "Publishing outbox batch to integration bus. Count={Count}, BatchEventId={BatchEventId}",
+                messages.Count,
+                batchEvent.BatchId);
+
             await _publisher.PublishBatchAsync(batchEvent, cancellationToken);
+
+            _logger.LogInformation(
+                "Outbox batch publish returned successfully. Count={Count}, BatchEventId={BatchEventId}",
+                messages.Count,
+                batchEvent.BatchId);
+
+            _logger.LogDebug(
+                "Marking outbox batch messages as processed. Count={Count}, BatchEventId={BatchEventId}",
+                messages.Count,
+                batchEvent.BatchId);
 
             await HandleBatchSuccessAsync(messages, cancellationToken);
 
@@ -92,12 +130,24 @@ public sealed class OutboxProcessor : IOutboxProcessor
                     OutboxMessageCatalog.MessagePublishedInBatch,
                     message.Id,
                     message.CorrelationId);
+
+                _logger.LogDebug(
+                    "Outbox message marked as processed after batch publish. MessageId={MessageId}, CorrelationId={CorrelationId}",
+                    message.Id,
+                    message.CorrelationId);
             }
 
             return messages.Count;
         }
         catch (Exception ex)
         {
+            _logger.LogError(
+                ex,
+                "Batch publish failed. Falling back to individual processing. Count={Count}, MessageIds={MessageIds}, CorrelationIds={CorrelationIds}",
+                messages.Count,
+                string.Join(",", messages.Select(message => message.Id)),
+                string.Join(",", messages.Select(message => message.CorrelationId)));
+
             _logger.LogError(ex, OutboxMessageCatalog.BatchPublishFailedFallback);
 
             return await ProcessIndividuallyOnFailureAsync(messages, cancellationToken);
@@ -116,6 +166,11 @@ public sealed class OutboxProcessor : IOutboxProcessor
     {
         var processedCount = 0;
 
+        _logger.LogInformation(
+            "Starting individual fallback processing for outbox messages. Count={Count}, MessageIds={MessageIds}",
+            messages.Count,
+            string.Join(",", messages.Select(message => message.Id)));
+
         foreach (var message in messages)
         {
             if (await ProcessMessageAsync(message, cancellationToken))
@@ -123,6 +178,12 @@ public sealed class OutboxProcessor : IOutboxProcessor
                 processedCount++;
             }
         }
+
+        _logger.LogInformation(
+            "Individual fallback processing finished. Attempted={Attempted}, Succeeded={Succeeded}, Failed={Failed}",
+            messages.Count,
+            processedCount,
+            messages.Count - processedCount);
 
         return processedCount;
     }
@@ -139,9 +200,26 @@ public sealed class OutboxProcessor : IOutboxProcessor
     {
         try
         {
+            _logger.LogDebug(
+                "Publishing single outbox message. MessageId={MessageId}, CorrelationId={CorrelationId}, EventName={EventName}, AggregateId={AggregateId}",
+                message.Id,
+                message.CorrelationId,
+                message.EventName,
+                message.AggregateId);
+
             var integrationEvent = MapToIntegrationEvent(message);
 
             await _publisher.PublishAsync(integrationEvent, cancellationToken);
+
+            _logger.LogInformation(
+                "Single outbox message published successfully. MessageId={MessageId}, CorrelationId={CorrelationId}",
+                message.Id,
+                message.CorrelationId);
+
+            _logger.LogDebug(
+                "Marking single outbox message as processed. MessageId={MessageId}, CorrelationId={CorrelationId}",
+                message.Id,
+                message.CorrelationId);
 
             await HandleSingleSuccessAsync(message, cancellationToken);
 
@@ -162,6 +240,14 @@ public sealed class OutboxProcessor : IOutboxProcessor
                 message.Id,
                 message.CorrelationId);
 
+            _logger.LogError(
+                ex,
+                "Failed to publish and process single outbox message. MessageId={MessageId}, CorrelationId={CorrelationId}, EventName={EventName}, AggregateId={AggregateId}",
+                message.Id,
+                message.CorrelationId,
+                message.EventName,
+                message.AggregateId);
+
             return false;
         }
     }
@@ -177,11 +263,26 @@ public sealed class OutboxProcessor : IOutboxProcessor
     {
         foreach (var message in messages)
         {
+            _logger.LogDebug(
+                "Setting ProcessedOnUtc for outbox message in batch. MessageId={MessageId}, CorrelationId={CorrelationId}",
+                message.Id,
+                message.CorrelationId);
+
             message.MarkAsProcessed();
         }
 
+        _logger.LogDebug(
+            "Persisting processed batch messages. Count={Count}, MessageIds={MessageIds}",
+            messages.Count,
+            string.Join(",", messages.Select(message => message.Id)));
+
         await _outboxRepository.UpdateRangeAsync(messages, cancellationToken);
         await _outboxRepository.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Processed batch messages persisted successfully. Count={Count}, MessageIds={MessageIds}",
+            messages.Count,
+            string.Join(",", messages.Select(message => message.Id)));
     }
 
     /// <summary>
@@ -193,10 +294,20 @@ public sealed class OutboxProcessor : IOutboxProcessor
         OutboxMessage message,
         CancellationToken cancellationToken)
     {
+        _logger.LogDebug(
+            "Setting ProcessedOnUtc for single outbox message. MessageId={MessageId}, CorrelationId={CorrelationId}",
+            message.Id,
+            message.CorrelationId);
+
         message.MarkAsProcessed();
 
         await _outboxRepository.UpdateAsync(message, cancellationToken);
         await _outboxRepository.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Single processed outbox message persisted successfully. MessageId={MessageId}, CorrelationId={CorrelationId}",
+            message.Id,
+            message.CorrelationId);
     }
 
     /// <summary>
@@ -210,10 +321,21 @@ public sealed class OutboxProcessor : IOutboxProcessor
         Exception exception,
         CancellationToken cancellationToken)
     {
+        _logger.LogWarning(
+            "Marking outbox message as failed. MessageId={MessageId}, CorrelationId={CorrelationId}, Error={Error}",
+            message.Id,
+            message.CorrelationId,
+            exception.Message);
+
         message.MarkAsFailed(exception.Message);
 
         await _outboxRepository.UpdateAsync(message, cancellationToken);
         await _outboxRepository.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Failed outbox message persisted successfully. MessageId={MessageId}, CorrelationId={CorrelationId}",
+            message.Id,
+            message.CorrelationId);
     }
 
     /// <summary>
@@ -225,21 +347,20 @@ public sealed class OutboxProcessor : IOutboxProcessor
         IReadOnlyCollection<OutboxMessage> messages)
     {
         return new StoredIntegrationEventBatch(
-    Guid.NewGuid(),                    
-    "TransactionCreated",              
-    1,                                 
-    
-    DateTime.UtcNow,                   
-    messages.Select(message => new StoredIntegrationEventBatchItem(
-        message.Id,
-        message.EventName,
-        message.EventVersion,
-        message.AggregateId,
-        message.CorrelationId,
-        message.OccurredOnUtc,
-        message.Payload
-    )).ToList()
-);
+            Guid.NewGuid(),
+            "TransactionCreated",
+            1,
+            DateTime.UtcNow,
+            messages.Select(message => new StoredIntegrationEventBatchItem(
+                message.Id,
+                message.EventName,
+                message.EventVersion,
+                message.AggregateId,
+                message.CorrelationId,
+                message.OccurredOnUtc,
+                message.Payload
+            )).ToList()
+        );
     }
 
     /// <summary>
