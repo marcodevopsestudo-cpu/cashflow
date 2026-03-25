@@ -1,221 +1,267 @@
+---
+
+## 3) File: `requirements-traceability.md`
+### Directory
+`/docs/requirements-traceability.md`
+
+```md
 # Requirements Traceability
 
-This document maps the challenge requirements to the implemented solution.
+This document maps the challenge requirements to the implemented solution and to the supporting repository documentation.
 
-The goal is to clearly indicate:
+Its purpose is to make clear:
 
-- what is fully implemented;
-- what is implemented as a minimum viable version (MVP);
-- what is intentionally left as future evolution.
+- what is implemented;
+- where the evidence is in the repository;
+- which parts are intentionally presented as MVP or future evolution.
 
 ---
 
 ## 1. Business Requirements
 
-### Requirement: Service to control transactions
+### Requirement
 
-**Status: Implemented**
+Service to control financial transactions.
+
+**Status**
+Implemented.
 
 **Evidence**
 
-- Transaction Service receives debit and credit requests;
-- transactions are persisted in PostgreSQL;
-- transaction retrieval endpoints are available;
-- idempotency is enforced at the application level.
+- Transaction Service receives debit and credit requests.
+- Transactions are persisted in PostgreSQL.
+- Transaction retrieval endpoint is available.
+- Idempotency is enforced on the write path.
+
+**Repository evidence**
+
+- `transaction-service/`
+- `transaction-service/README.md`
+- root `README.md`
 
 ---
 
-### Requirement: Daily consolidated balance service
+### Requirement
 
-**Status: Implemented (MVP with full architectural separation)**
+Service for daily consolidated balance.
+
+**Status**
+Implemented as a functional MVP with full architectural separation.
 
 **Evidence**
 
-- dedicated Consolidation Service exists as an independent workload;
-- batch-oriented processing flow is implemented;
-- aggregation logic updates the `daily_balance` read model;
-- retry and manual error handling are implemented;
-- supporting database tables and migrations are present.
+- Consolidation Service exists as an independent workload.
+- Batch-oriented processing flow is implemented.
+- Aggregation updates the `daily_balance` read model.
+- Bounded retry behavior is implemented.
+- Manual review registration exists for exhausted failures.
+
+**Repository evidence**
+
+- `consolidation-service/`
+- root `README.md`
+- `docs/architecture-overview.md`
 
 **Note**
-
-The current implementation focuses on a robust MVP aligned with the challenge scope.
-Additional refinements (e.g., fine-grained failure handling) are documented as future improvements.
+The current implementation already demonstrates the main architectural decision required by the challenge: consolidation is independent from transaction ingestion. Additional operational refinement can still evolve.
 
 ---
 
 ## 2. Mandatory Technical Requirements
 
-### Requirement: Solution design
+### Requirement
 
-**Status: Implemented**
+Solution design.
+
+**Status**
+Implemented.
 
 **Evidence**
 
-- architecture documented in `docs/architecture.md`;
-- data flows explicitly described;
-- clear service decomposition and responsibilities;
-- documented design decisions and trade-offs.
+- architecture documented in `docs/architecture-overview.md`;
+- responsibilities and data flows explicitly described;
+- service decomposition and trade-offs documented.
 
 ---
 
-### Requirement: Use C#
+### Requirement
 
-**Status: Implemented**
+Use C#.
+
+**Status**
+Implemented.
 
 **Evidence**
 
-- all services and supporting components are implemented in .NET / C#.
+- services and supporting components are implemented in .NET / C#.
 
 ---
 
-### Requirement: Tests
+### Requirement
 
-**Status: Partially implemented (focused on core logic)**
+Tests.
+
+**Status**
+Partially implemented, focused on core logic.
 
 **Evidence**
 
-- unit and application-level tests exist for both services.
+- unit and application-level tests exist for the services;
+- local deterministic execution flow is documented.
 
 **Note**
-
-- end-to-end integration testing and load testing are identified as next steps;
-- current validation is supported through deterministic local execution (see operations guide).
+Broader integration and load testing are valid next steps, but the repository already contains enough testing evidence to satisfy the challenge expectation at a minimum viable level.
 
 ---
 
-### Requirement: Good practices, patterns, SOLID, architecture
+### Requirement
 
-**Status: Implemented**
+Good practices, patterns, SOLID, architecture.
+
+**Status**
+Implemented.
 
 **Evidence**
 
-- clear separation between Domain, Application, and Infrastructure layers;
+- layered separation between Domain, Application, Infrastructure, and API/Worker;
 - transactional outbox pattern;
-- idempotency handling;
+- request-level idempotency;
 - bounded retry strategy;
-- infrastructure as code (Terraform);
-- migration automation through DB Migrator.
+- infrastructure as code with Terraform;
+- deterministic database migrations via DB Migrator.
 
 ---
 
-### Requirement: Clear README explaining how it works and how to run locally
+### Requirement
 
-**Status: Implemented**
+README with clear instructions on how the application works and how to run locally.
+
+**Status**
+Implemented.
 
 **Evidence**
 
-- root-level README with system overview;
-- explicit local execution flow;
-- end-to-end validation steps;
-- supporting documentation in `docs/`.
+- root `README.md` explains the solution and repository structure;
+- `transaction-service/README.md` contains service-specific execution guidance;
+- `docs/OPERATIONS.md` describes the recommended execution sequence.
 
 ---
 
-### Requirement: Public repository with documentation
+### Requirement
 
-**Status: Implemented**
+Public repository with project documentation.
+
+**Status**
+Implemented.
 
 **Evidence**
 
-- documentation organized under `docs/`;
-- architecture, operations, non-functional requirements, and resilience clearly described.
+- documentation is organized under `docs/`;
+- architecture, operations, non-functional reasoning, and requirement coverage are documented in the repository.
 
 ---
 
 ## 3. Non-Functional Requirements
 
-### Requirement: Transaction service must remain available if consolidation is down
+### Requirement
 
-**Status: Implemented**
+The transaction service must not become unavailable if the daily consolidation system fails.
 
-**How it is achieved**
+**Status**
+Implemented.
 
-- asynchronous decoupling using outbox + Service Bus;
-- transaction ingestion does not depend on consolidation processing;
-- failures in downstream services do not affect the write path.
+**How it is addressed**
+
+- transaction ingestion is separated from consolidation;
+- outbox records are persisted with the source transaction;
+- Azure Service Bus decouples producer and consumer;
+- consolidation is asynchronous and independent from the write path.
+
+**Repository evidence**
+
+- root `README.md`
+- `docs/architecture-overview.md`
+- `docs/non-functional-requirements.md`
 
 ---
 
-### Requirement: Consolidation must handle burst traffic and tolerate limited data loss
+### Requirement
 
-**Status: Implemented (architectural level, validated through design)**
+In peak days, the consolidation service receives 50 requests per second with at most 5% request loss.
 
-**How it is achieved**
+**Status**
+Architecturally addressed.
 
-- asynchronous processing with independent scaling (Azure Functions);
-- buffering through outbox and Service Bus;
-- batch processing to improve throughput;
-- retry and manual handling for failed records.
+**How it is addressed**
+
+- the ingestion path is lightweight and synchronous only up to durable persistence;
+- buffering happens across PostgreSQL, outbox, and Azure Service Bus;
+- failures are tracked explicitly;
+- derived data incompleteness is measurable and recoverable.
+
+**Repository evidence**
+
+- `docs/non-functional-requirements.md`
+- `docs/architecture-overview.md`
 
 **Note**
-
-- final throughput and loss-rate validation depend on environment sizing and load testing;
-- observability and operational controls are defined to enforce SLA (see NFR document).
+The repository documents the architectural mechanisms that address this requirement. Full empirical certification would require dedicated load testing and operational validation.
 
 ---
 
-## 4. Security
+## 4. Security and Access Controls
 
-**Status: Implemented (baseline) with planned hardening**
+### Requirement
+
+Security is part of the architectural evaluation.
+
+**Status**
+Implemented at infrastructure and service-configuration level.
 
 **Evidence**
 
-- Microsoft Entra ID integration;
-- GitHub OIDC authentication for deployments;
-- Azure Key Vault integration;
-- planned network isolation (documented in architecture and BC/DR docs).
+- Microsoft Entra ID configuration for the Transaction Service;
+- issuer, audience, scope and allowed application validation;
+- Managed Identity configuration for Service Bus access;
+- Key Vault references for secrets;
+- RBAC assignments for infrastructure access;
+- GitHub Actions deployment through OIDC.
+
+**Repository evidence**
+
+- `infra/`
+- root `README.md`
+- `docs/architecture-overview.md`
 
 ---
 
-## 5. Resilience
+## 5. What Is MVP vs What Is Future Evolution
 
-**Status: Implemented**
+### Implemented as part of the delivered solution
 
-**Evidence**
+- Transaction Service
+- Consolidation Service as independent workload
+- DB Migrator
+- Terraform-managed infrastructure
+- core resilience patterns
+- core security controls
+- CI/CD automation
 
-- transactional outbox guarantees event durability;
-- retry strategy in consolidation workflow;
-- manual review lane for unrecoverable failures;
-- idempotency across transaction and batch processing.
+### Natural future evolution
 
----
-
-## 6. Observability
-
-**Status: Implemented (baseline)**
-
-**Evidence**
-
-- Application Insights integration;
-- correlation ID propagation strategy;
-- documented metrics and alert recommendations.
+- richer integration and load testing;
+- deeper dashboards and operational alerts;
+- improved manual reconciliation/backoffice flow for exhausted failures;
+- stronger BC/DR operational maturity.
 
 ---
 
-## 7. Future Improvements
+## 6. Final Assessment
 
-The solution explicitly documents realistic next steps instead of overstating completeness.
+The repository satisfies the challenge mainly through its architectural decisions:
 
-Examples:
-
-- automated replay tooling for failed batches;
-- dead-letter queue integration;
-- finer-grained failure handling inside batches;
-- load testing and SLA validation;
-- enhanced network isolation and security controls.
-
----
-
-## 8. Final Positioning
-
-The solution aligns with the challenge objectives by demonstrating:
-
-- clear architectural decomposition;
-- separation between write and processing paths;
-- support for key non-functional requirements;
-- resilience and failure isolation;
-- operational readiness and reproducibility;
-- explicit trade-offs and evolution roadmap.
-
-The implementation prioritizes **correct architectural direction and clarity of reasoning**, while leaving room for iterative improvement.
+- the write path is protected;
+- the consolidation flow is decoupled;
+- source data is durable;
+- downstream failures are recoverable;
+- the solution is documented in a way that exposes architectural reasoning, not only code structure.

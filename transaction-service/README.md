@@ -1,25 +1,84 @@
-# transaction-service
+# Transaction Service
 
-Azure Functions isolated worker application responsible for recording debit and credit entries.
+Azure Functions isolated worker application responsible for recording debit and credit transactions.
 
-## Implemented capabilities
+This service is the **main synchronous entry point** of the solution and is intentionally designed to remain available even if the downstream consolidation flow is delayed or unavailable.
+
+---
+
+## Responsibilities
+
+- receive debit and credit requests;
+- validate input;
+- enforce request-level idempotency;
+- persist transactions in PostgreSQL;
+- persist outbox messages in the same database transaction;
+- expose transaction query endpoints;
+- publish pending outbox records through a timer-triggered process.
+
+---
+
+## Implemented Capabilities
 
 - `POST /api/transactions`
 - `GET /api/transactions/{transactionId}`
 - PostgreSQL persistence
-- Idempotency enforcement for transaction creation
-- Transactional outbox persistence
-- Timer-triggered outbox publishing to Azure Service Bus
-- Application Insights integration
+- request-level idempotency
+- transactional outbox persistence
+- timer-triggered outbox publication to Azure Service Bus
+- Application Insights integration hooks
+- layered structure with Domain / Application / Infrastructure / API
 
-## Local development
+---
+
+## Architectural Notes
+
+### Why the outbox lives here
+
+The outbox publisher is intentionally hosted in the same workload as the write service to keep the ingestion slice cohesive and to ensure publication can recover from temporary downstream issues without introducing a hard dependency on the consolidation runtime.
+
+### Why this service does not wait for consolidation
+
+The challenge requires the transaction service to remain available even if consolidation fails.
+Because of that, this service acknowledges successful transaction creation after:
+
+- durable persistence of source data;
+- durable persistence of the corresponding outbox record.
+
+Daily balance update happens asynchronously in the Consolidation Service.
+
+---
+
+## Security and Access
+
+In deployed environments, this service is configured to use:
+
+- Microsoft Entra ID authentication/authorization;
+- audience, issuer, scope and allowed-client validation;
+- Key Vault references for secrets;
+- Managed Identity for Service Bus access.
+
+For local development, authorization can be disabled when needed.
+
+---
+
+## Local Development
+
+### Prerequisites
+
+- .NET 8 SDK
+- PostgreSQL
+- Azure Functions Core Tools
+- optional Azurite for local storage emulation
+
+### Recommended Flow
 
 1. Start PostgreSQL locally or point the app to an Azure PostgreSQL instance.
-2. Apply the SQL scripts through `../db-migrator`.
-3. Create `src/TransactionService.Api/local.settings.json` from the template below.
+2. Apply database migrations through `../db-migrator`.
+3. Create `src/TransactionService.Api/local.settings.json`.
 4. Run the Function App.
 
-### local.settings.json template
+### `local.settings.json` template
 
 ```json
 {
@@ -36,13 +95,3 @@ Azure Functions isolated worker application responsible for recording debit and 
   }
 }
 ```
-
-## Testing strategy
-
-- Unit tests cover command/query handlers, authorization evaluation, request parsing and selected domain behavior.
-- `db-migrator` is intended to be executed in CI/CD before the deployment step.
-
-## Notes
-
-- The current repository does not yet include the future daily balance consolidation service.
-- The outbox timer is intentionally hosted in the same workload as the write service to keep the first delivery slice small and operationally simple.

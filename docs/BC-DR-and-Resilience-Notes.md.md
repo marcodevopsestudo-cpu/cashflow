@@ -35,12 +35,12 @@ The current implementation already incorporates key resilience patterns:
 - Failures in consolidation do not propagate to the transaction service.
 - Batch processing supports retries and manual intervention.
 
-### Observability (Initial)
+### Observability
 
-- Application Insights integration is available for:
+- Application Insights integration provides:
   - request tracking;
   - error visibility;
-  - basic operational diagnostics.
+  - operational diagnostics and traceability.
 
 ---
 
@@ -51,7 +51,7 @@ The current implementation intentionally prioritizes core functionality and arch
 The following areas are identified as **future improvements**, not blockers:
 
 - no formalized regional failover process;
-- limited infrastructure hardening (e.g., no private endpoints or network isolation);
+- infrastructure security is already implemented with RBAC, Managed Identity and Entra ID, but can be further evolved with advanced network isolation (e.g., Private Endpoints, VNet integration);
 - no automated runbooks for PostgreSQL recovery;
 - observability not yet extended to full SLO/SLA monitoring.
 
@@ -68,7 +68,7 @@ The system is designed around **recoverability rather than strict prevention**.
 
 ### Event Recovery
 
-- Outbox enables replay of unpublished events.
+- Outbox enables replay of unpublished events and guarantees recovery of integration flow.
 - Failed batches are recorded for manual or automated reprocessing.
 
 ### Processing Recovery
@@ -178,7 +178,7 @@ This solution prioritizes:
 - availability of transaction ingestion;
 - durability of financial data;
 - recoverability through asynchronous processing;
-- controlled and observable failure handling.
+- controlled, observable and recoverable failure handling.
 
 The system is intentionally designed to:
 

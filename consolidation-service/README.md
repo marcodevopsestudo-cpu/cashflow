@@ -1,8 +1,14 @@
 # Consolidation Service
 
-Consolidation Service is the asynchronous daily-balance processor for the software architect challenge. It receives batches of transaction identifiers from Azure Service Bus, loads the transactions from PostgreSQL, aggregates credit and debit amounts by day, updates the `daily_balance` read model, records the batch lifecycle in `daily_batch`, and isolates unrecoverable items in `transaction_processing_error` for manual follow-up.
+The Consolidation Service is the asynchronous daily-balance processor of the cashflow solution.
 
-## Why this service exists
+It consumes transaction batch messages from Azure Service Bus, loads the referenced transactions from PostgreSQL, aggregates debit and credit amounts by day, updates the `daily_balance` read model, tracks the processing lifecycle in `daily_batch`, and isolates unrecoverable items in `transaction_processing_error` for manual follow-up.
+
+This service exists to ensure that **daily balance processing does not reduce the availability of the transaction write path**.
+
+---
+
+## Why This Service Exists
 
 The challenge requires:
 
@@ -10,49 +16,100 @@ The challenge requires:
 - a daily consolidation service; and
 - resilience so the transaction control service stays available even if consolidation fails.
 
-This implementation keeps the write path in **Transaction Service** and moves the consolidation responsibility to a dedicated background service. The public balance endpoint can stay in Transaction Service and read only the materialized `daily_balance` table.
+To satisfy that requirement, the solution separates the system into:
 
-## Key decisions
+- a **synchronous write path** handled by Transaction Service; and
+- an **asynchronous consolidation path** handled by this service.
 
-- **Dedicated asynchronous worker** instead of synchronous consolidation.
-- **Batch messages** containing transaction ids instead of one message per transaction.
-- **Manual pipeline orchestration** instead of System.Reactive to keep the code easier to review.
-- **MediatR + FluentValidation** for the same application flow style used in Transaction Service.
-- **Application Insights + structured logs** with `CorrelationId`, `BatchId`, `MessageId`, and transaction counts.
-- **Bounded retry with exponential backoff** and no infinite reprocessing.
-- **Manual review lane** through `transaction_processing_error` when retries are exhausted.
+This design keeps transaction ingestion lightweight and durable, while allowing balance calculation to scale, retry and recover independently.
 
-## Solution structure
+---
 
-```text
-src/
-  ConsolidationService.Domain/
-  ConsolidationService.Application/
-  ConsolidationService.Infrastructure/
-  ConsolidationService.Worker/
-tests/
-  ConsolidationService.Application.Tests/
-docs/
-scripts/sql/
-```
+## Responsibilities
 
-## Processing flow
+- consume batch messages from Azure Service Bus;
+- validate and deserialize the integration message;
+- register or load the current batch state;
+- load referenced transactions from PostgreSQL;
+- aggregate debit and credit values by balance date;
+- update the `daily_balance` read model using upsert semantics;
+- mark transactions as consolidated;
+- finalize successful batches;
+- retry failed processing with bounded attempts and exponential backoff;
+- record exhausted items for manual reconciliation.
 
-1. Transaction Service publishes a batch message to Service Bus.
+---
+
+## Key Architectural Decisions
+
+### Dedicated asynchronous worker
+
+Consolidation is intentionally separated from the transaction write API.
+
+This avoids coupling transaction ingestion latency to balance processing time and protects the write path from consolidation outages.
+
+### Batch messages instead of one message per transaction
+
+The service consumes a message containing a list of transaction identifiers.
+
+This reduces throughput friction between publisher and consumer and makes the consolidation path more efficient under load.
+
+### Bounded retry with exponential backoff
+
+Failures are retried a limited number of times before being moved to a manual handling path.
+
+This avoids infinite reprocessing loops and keeps failures explicit and auditable.
+
+### Manual review lane
+
+When retries are exhausted, failed items are recorded in `transaction_processing_error`.
+
+This preserves recoverability without blocking the entire flow permanently.
+
+### Structured observability
+
+The service emits structured logs with identifiers such as:
+
+- `CorrelationId`
+- `BatchId`
+- `MessageId`
+- transaction counts
+
+This improves troubleshooting and operational follow-up.
+
+---
+
+## Processing Flow
+
+1. Transaction Service publishes a batch message to Azure Service Bus.
 2. Consolidation Service receives the message.
-3. The Function trigger creates a `ProcessConsolidationBatchCommand` and sends it through MediatR.
-4. The handler delegates execution to `IConsolidationWorkflow`.
-5. The workflow executes these steps:
-   - register or load the batch;
-   - load pending transactions;
-   - aggregate transactions by date;
-   - update `daily_balance` with upsert semantics;
-   - mark transactions as consolidated;
-   - finalize the batch.
-6. If processing fails, the retry policy applies exponential backoff.
-7. If retries are exhausted, the workflow records a manual-review item in `transaction_processing_error` and marks the batch as failed.
+3. The Function trigger creates a `ProcessConsolidationBatchCommand`.
+4. The command is sent through MediatR.
+5. The workflow:
+   - registers or resumes the batch;
+   - loads pending transactions;
+   - aggregates values by date;
+   - updates `daily_balance`;
+   - marks transactions as consolidated;
+   - finalizes the batch.
+6. If processing fails, bounded retry with exponential backoff is applied.
+7. If retries are exhausted, the service records the failure for manual reconciliation and marks the batch accordingly.
 
-## Message contract
+---
+
+## Data Managed by This Service
+
+The consolidation flow works with these main persistence concerns:
+
+- `daily_batch` for batch lifecycle tracking;
+- `daily_balance` for the consolidated read model;
+- `transaction_processing_error` for unrecoverable or manually reviewed items.
+
+This allows the service to be operationally transparent: success, retry, and failure states are visible in persisted data.
+
+---
+
+## Message Contract
 
 ```json
 {
@@ -62,53 +119,3 @@ scripts/sql/
   "transactionIds": [101, 102, 103, 104]
 }
 ```
-
-## Local configuration
-
-Create `src/ConsolidationService.Worker/local.settings.json`:
-
-```json
-{
-  "IsEncrypted": false,
-  "Values": {
-    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "ServiceBusConnection": "<connection-string>",
-    "ServiceBusTopicName": "daily-consolidation",
-    "ServiceBusSubscriptionName": "consolidation-service",
-    "Postgres:ConnectionString": "Host=localhost;Port=5432;Database=challenge;Username=postgres;Password=postgres",
-    "ApplicationInsights:ConnectionString": "<connection-string>"
-  }
-}
-```
-
-## Run locally
-
-1. Create the PostgreSQL objects using the scripts inside `scripts/sql`.
-2. Start Azurite or provide an Azure Storage connection.
-3. Start the Function App:
-   - `func start --csharp`
-4. Publish one valid batch message to the configured topic.
-5. Inspect the database tables:
-   - `daily_batch`
-   - `daily_balance`
-   - `transaction_processing_error`
-
-## Tests
-
-The test project focuses on the application layer and the orchestration flow.
-
-```bash
-dotnet test
-```
-
-## Documentation
-
-- [Architecture](docs/architecture.md)
-- [Workflow](docs/workflow.md)
-- [Operational behavior](docs/operational-behavior.md)
-- [Database design](docs/database.md)
-
-## Suggested deployment
-
-For this challenge, Azure Functions (.NET isolated, Flex Consumption) is the most balanced hosting model for the consolidation worker because it provides auto-scale, low operational overhead, and event-driven processing without running dedicated compute all the time.

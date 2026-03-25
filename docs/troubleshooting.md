@@ -2,7 +2,13 @@
 
 This document captures common operational issues and recommended resolution steps.
 
-The goal is to provide quick diagnostics and recovery guidance for known failure scenarios.
+The goal is to provide quick diagnostics and recovery guidance for known failure scenarios across:
+
+- deployment
+- messaging
+- database
+- authentication
+- asynchronous processing
 
 ---
 

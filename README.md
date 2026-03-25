@@ -2,18 +2,18 @@
 
 ## Executive Summary
 
-This repository contains a software architect challenge solution for a cashflow scenario with **two business services** and **one operational support component**:
+This repository contains a cashflow challenge solution designed around **two business services** and **one operational support component**:
 
 1. **Transaction Service**
-   Responsible for receiving debit and credit transactions, validating requests, persisting data in PostgreSQL, and registering integration events through the outbox pattern.
+   Receives debit and credit transactions, validates requests, persists data in PostgreSQL, and records integration events using the outbox pattern.
 
 2. **Consolidation Service**
-   Responsible for asynchronously processing published transaction batches and updating the **daily consolidated balance** read model.
+   Processes published transaction batches asynchronously and updates the **daily consolidated balance** read model.
 
 3. **DB Migrator**
-   Responsible for applying ordered SQL migrations to PostgreSQL in a deterministic and auditable way.
+   Applies ordered SQL migrations to PostgreSQL in a deterministic and auditable way.
 
-The solution is intentionally designed so that the **transaction write path remains available even if the consolidation flow is delayed or temporarily unavailable**.
+The solution was designed so that the **transaction write path remains available even if consolidation is delayed or temporarily unavailable**, directly addressing the main non-functional requirement of the challenge.
 
 ---
 
@@ -21,102 +21,54 @@ The solution is intentionally designed so that the **transaction write path rema
 
 The challenge asks for:
 
-- a service to control financial transactions;
+- a service to control transactions;
 - a service to generate the daily consolidated balance;
-- clear architectural decisions;
-- code and documentation in the repository;
-- tests and execution guidance.
+- design decisions and architectural documentation;
+- code, tests, and clear execution guidance in a public repository.
 
 This repository addresses that scope with:
 
 - **Transaction Service** for the synchronous write path;
 - **Consolidation Service** for the asynchronous daily balance processing path;
 - **DB Migrator** for controlled schema evolution;
-- architecture and operational documentation organized under `docs/`.
+- supporting documentation under `docs/`.
+
+For a requirement-by-requirement view, see [docs/requirements-traceability.md](./docs/requirements-traceability.md).
 
 ---
 
-## Current Implementation Status
+## Solution Overview
 
-### Fully Functional
+The architecture follows a **serverless, event-driven, decoupled** design on Azure.
 
-#### Transaction Service
-
-Implemented capabilities:
-
-- `POST /api/transactions`
-- `GET /api/transactions/{transactionId}`
-- PostgreSQL persistence
-- request-level idempotency
-- transactional outbox persistence
-- scheduled outbox publication
-- Application Insights integration hooks
-- layered structure with Domain / Application / Infrastructure / API
-
-This service is the **main synchronous entry point** and is the most complete part of the solution.
+- **Transaction Service** receives requests over HTTP on Azure Functions (.NET isolated).
+- Transactions are persisted in **PostgreSQL**.
+- An **outbox table** guarantees that integration events are stored in the same transaction as the write model.
+- A timer-triggered publisher reads the outbox and sends messages to **Azure Service Bus**.
+- **Consolidation Service** consumes transaction batches asynchronously and updates the `daily_balance` read model.
+- **Application Insights** centralizes logs and telemetry.
+- **Terraform** provisions the main cloud infrastructure.
+- **GitHub Actions with OIDC** automates build and deployment without long-lived deployment secrets.
 
 ---
 
-### Functional MVP
-
-#### Consolidation Service
-
-Implemented capabilities:
-
-- asynchronous batch consumption
-- batch lifecycle tracking
-- transaction loading from PostgreSQL
-- daily aggregation by date
-- upsert into `daily_balance`
-- processed transaction marking
-- bounded retry behavior
-- manual review registration for exhausted failures
-- layered structure with Domain / Application / Infrastructure / Worker
-
-This service is **implemented as a functional MVP**, demonstrating architectural separation, resilience, and recoverability.
-
----
-
-### Operational Support Component
-
-#### DB Migrator
-
-Implemented capabilities:
-
-- ordered SQL execution
-- migration history tracking
-- checksum validation
-- fail-fast behavior for migration drift
-
----
-
-## What Is Implemented End-to-End
-
-The repository implements the following **end-to-end business flow**:
-
-1. a client sends a debit or credit request to **Transaction Service**;
-2. the transaction is validated and persisted in PostgreSQL;
-3. an **outbox event** is recorded in the same database transaction;
-4. a scheduled publisher reads pending outbox entries and publishes a batch message;
-5. **Consolidation Service** consumes the message asynchronously;
-6. transactions are loaded and aggregated by date;
-7. the `daily_balance` read model is updated;
-8. transactions are marked as processed.
-
-This demonstrates the **decoupled integration between write and processing paths**.
-
----
-
-## high-Level Architecture
+## Architecture at a Glance
 
 ```mermaid
 flowchart LR
-    Client[Client / Consumer] -->|HTTP| Tx[Transaction Service]
-    Tx --> Pg[(PostgreSQL)]
-    Tx --> Outbox[(Outbox Table)]
-    Timer[Outbox Publisher] --> Outbox
-    Timer --> Bus[(Message Broker / Service Bus)]
-    Bus --> Cons[Consolidation Service]
-    Cons --> Pg
-    Migrator[DB Migrator] --> Pg
+    Client[Client / Postman / Consumer App] -->|Microsoft Entra access token| TxApi[Transaction Service<br/>Azure Functions]
+    TxApi --> Pg[(PostgreSQL)]
+    TxApi --> Outbox[(Outbox Table)]
+    Outbox --> Publisher[Outbox Publisher<br/>Timer Trigger]
+    Publisher --> Sb[(Azure Service Bus Topic)]
+    Sb --> Consolidation[Consolidation Service<br/>Azure Functions]
+    Consolidation --> Pg
+    TxApi --> Ai[Application Insights]
+    Consolidation --> Ai
+    GitHub[GitHub Actions + OIDC] --> Azure[Azure Control Plane]
+    Azure --> TxApi
+    Azure --> Consolidation
+    Azure --> Kv[Key Vault]
+    TxApi --> Kv
+    Consolidation --> Kv
 ```
