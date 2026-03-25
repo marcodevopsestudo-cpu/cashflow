@@ -80,7 +80,7 @@ public sealed class ValidateTransactionsStepTests
         await transactionRepository.Received(1).MarkAsFailedAsync(
             Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.SequenceEqual(expectedIds)),
             batchId,
-            1,
+            0,
             TransactionProcessingStatus.PendingManualReview,
             CancellationToken.None);
     }

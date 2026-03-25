@@ -104,10 +104,10 @@ public sealed class ConsolidationWorkflowTests
     }
 
     /// <summary>
-    /// Ensures that the batch is marked for manual review when processing fails.
+    /// Ensures that only the batch is marked as failed when processing fails before transactions are loaded.
     /// </summary>
     [Fact]
-    public async Task Should_mark_batch_for_manual_review_when_processing_fails()
+    public async Task Should_mark_only_batch_as_failed_when_processing_fails_before_loading_transactions()
     {
         // Arrange
         var batchRepository = Substitute.For<IDailyBatchRepository>();
@@ -140,17 +140,17 @@ public sealed class ConsolidationWorkflowTests
         await batchRepository.Received(1)
             .MarkAsFailedAsync(message.BatchId, "boom", 1, CancellationToken.None);
 
-        await transactionRepository.Received(1)
+        await transactionRepository.DidNotReceive()
             .MarkAsFailedAsync(
-                Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.SequenceEqual(message.TransactionIds)),
-                message.BatchId,
-                1,
-                TransactionProcessingStatus.PendingManualReview,
+                Arg.Any<IReadOnlyCollection<Guid>>(),
+                Arg.Any<Guid>(),
+                Arg.Any<int>(),
+                Arg.Any<TransactionProcessingStatus>(),
                 CancellationToken.None);
 
-        await errorRepository.Received(1)
+        await errorRepository.DidNotReceive()
             .InsertAsync(
-                Arg.Is<IReadOnlyCollection<TransactionProcessingError>>(x => x.Count == 2),
+                Arg.Any<IReadOnlyCollection<TransactionProcessingError>>(),
                 CancellationToken.None);
     }
 

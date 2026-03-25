@@ -45,21 +45,46 @@ variable "postgres_admin_password" {
   sensitive = true
 }
 
+# -----------------------------
+# Service Bus
+# -----------------------------
+
 variable "servicebus_topic_name" {
   type    = string
   default = "transaction-events"
 }
+
+variable "servicebus_subscription_name" {
+  type    = string
+  default = "consolidation-service"
+}
+
+# -----------------------------
+# Function App
+# -----------------------------
 
 variable "function_app_name_override" {
   type    = string
   default = null
 }
 
+# -----------------------------
+# Networking
+# -----------------------------
+
+variable "start_ip_address" {
+  type = string
+}
+
+variable "end_ip_address" {
+  type = string
+}
+
+# -----------------------------
+# Tags
+# -----------------------------
+
 variable "tags" {
   type    = map(string)
   default = {}
 }
-
-
-variable "start_ip_address" { type = string }
-variable "end_ip_address" { type = string }

@@ -5,7 +5,6 @@ using ConsolidationService.Application.Models;
 using ConsolidationService.Application.Steps;
 using ConsolidationService.Domain.Constants;
 using ConsolidationService.Domain.Entities;
-using ConsolidationService.Domain.Enums;
 using ConsolidationService.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -136,7 +135,8 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
 
     /// <summary>
     /// Handles failures during workflow execution by updating batch state,
-    /// persisting errors, and marking transactions for manual review.
+    /// persisting errors for the remaining transactions in the pipeline,
+    /// and marking only those transactions for manual review.
     /// </summary>
     /// <param name="context">Execution context.</param>
     /// <param name="exception">Exception that occurred.</param>
@@ -156,21 +156,40 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
             retryCount,
             cancellationToken);
 
-        var failures = message.TransactionIds
+        var remainingTransactionIds = context.Transactions
+            .Select(transaction => transaction.Id)
+            .Distinct()
+            .ToArray();
+
+        if (remainingTransactionIds.Length == 0)
+        {
+            _logger.LogError(
+                exception,
+                BatchLogMessages.Workflow.MovedToManualReview,
+                message.BatchId,
+                retryCount,
+                0);
+
+            return;
+        }
+
+        var occurredOnUtc = DateTime.UtcNow;
+
+        var failures = remainingTransactionIds
             .Select(id => new TransactionProcessingError(
                 id,
                 message.BatchId,
                 exception.Message,
-                DateTime.UtcNow))
+                occurredOnUtc))
             .ToArray();
 
         await _errorRepository.InsertAsync(failures, cancellationToken);
 
         await _transactionRepository.MarkAsFailedAsync(
-            message.TransactionIds,
+            remainingTransactionIds,
             message.BatchId,
             retryCount,
-            TransactionProcessingStatus.PendingManualReview,
+            Domain.Enums.TransactionProcessingStatus.PendingManualReview,
             cancellationToken);
 
         _logger.LogError(
@@ -178,6 +197,6 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
             BatchLogMessages.Workflow.MovedToManualReview,
             message.BatchId,
             retryCount,
-            message.TransactionIds.Count);
+            remainingTransactionIds.Length);
     }
 }

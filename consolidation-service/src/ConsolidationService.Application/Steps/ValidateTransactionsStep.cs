@@ -44,6 +44,7 @@ public sealed class ValidateTransactionsStep
         var validTransactions = new List<Transaction>();
         var invalidTransactionIds = new List<Guid>();
         var errors = new List<TransactionProcessingError>();
+        var occurredOnUtc = DateTime.UtcNow;
 
         foreach (var transaction in context.Transactions)
         {
@@ -60,7 +61,7 @@ public sealed class ValidateTransactionsStep
                     transaction.Id,
                     context.Message.BatchId,
                     exception.Message,
-                    DateTime.UtcNow));
+                    occurredOnUtc));
 
                 _logger.LogWarning(
                     BatchLogMessages.Workflow.TransactionMovedToManualReview,
@@ -70,19 +71,21 @@ public sealed class ValidateTransactionsStep
             }
         }
 
-        if (errors.Count > 0)
-        {
-            await _errorRepository.InsertAsync(errors, cancellationToken);
+        context.Transactions = validTransactions;
 
-            await _transactionRepository.MarkAsFailedAsync(
-                invalidTransactionIds,
-                context.Message.BatchId,
-                1,
-                TransactionProcessingStatus.PendingManualReview,
-                cancellationToken);
+        if (invalidTransactionIds.Count == 0)
+        {
+            return;
         }
 
-        context.Transactions = validTransactions;
+        await _errorRepository.InsertAsync(errors, cancellationToken);
+
+        await _transactionRepository.MarkAsFailedAsync(
+            invalidTransactionIds.ToArray(),
+            context.Message.BatchId,
+            0,
+            TransactionProcessingStatus.PendingManualReview,
+            cancellationToken);
     }
 
     /// <summary>

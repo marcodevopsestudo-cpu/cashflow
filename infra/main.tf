@@ -1,7 +1,8 @@
 locals {
-  prefix         = "${var.project_name}-${var.environment}"
-  compact_prefix = replace(local.prefix, "-", "")
-  function_name  = coalesce(var.function_app_name_override, "func-${local.prefix}-tx")
+  prefix                      = "${var.project_name}-${var.environment}"
+  compact_prefix              = replace(local.prefix, "-", "")
+  function_name               = coalesce(var.function_app_name_override, "func-${local.prefix}-tx")
+  consolidation_function_name = "func-${local.prefix}-consolidation"
 
   default_tags = {
     project     = var.project_name
@@ -11,7 +12,47 @@ locals {
   }
 
   tags = merge(local.default_tags, var.tags)
+
+  transaction_service_app_settings = {
+    FUNCTIONS_WORKER_RUNTIME              = "dotnet-isolated"
+    FUNCTIONS_EXTENSION_VERSION           = "~4"
+    ASPNETCORE_ENVIRONMENT                = var.environment
+    AzureWebJobsStorage__accountName      = module.storage.name
+    ServiceBus__TopicName                 = module.servicebus.topic_name
+    ServiceBus__FullyQualifiedNamespace   = module.servicebus.namespace_fqdn
+    ServiceBus__UseManagedIdentity        = "true"
+    ServiceBus__ConnectionString          = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.servicebus_connection_string.versionless_id})"
+    ConnectionStrings__Postgres           = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.postgres_connection_string.versionless_id})"
+    Authorization__Enabled                = "true"
+    Authorization__AllowedAppIds__0       = module.entra_postman_client_app.client_id
+    Authorization__AllowedAudiences__0    = module.entra_api.client_id
+    Authorization__AllowedAudiences__1    = "api://${module.entra_api.client_id}"
+    Authorization__AllowedIssuers__0      = "https://login.microsoftonline.com/${var.tenant_id}/v2.0"
+    Authorization__RequiredScopes__0      = "access_as_user"
+    APPLICATIONINSIGHTS_CONNECTION_STRING = module.appinsights.connection_string
+    # AzureWebJobsFeatureFlags            = "EnableWorkerIndexing"
+  }
+
+  consolidation_service_app_settings = {
+    FUNCTIONS_WORKER_RUNTIME              = "dotnet-isolated"
+    FUNCTIONS_EXTENSION_VERSION           = "~4"
+    ASPNETCORE_ENVIRONMENT                = var.environment
+    AzureWebJobsStorage__accountName      = module.storage.name
+    ServiceBus__TopicName                 = module.servicebus.topic_name
+    ServiceBus__SubscriptionName          = var.servicebus_subscription_name
+    ServiceBus__FullyQualifiedNamespace   = module.servicebus.namespace_fqdn
+    ServiceBus__UseManagedIdentity        = "true"
+    ServiceBus__ConnectionString          = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.servicebus_connection_string.versionless_id})"
+    ConnectionStrings__Postgres           = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.postgres_connection_string.versionless_id})"
+    APPLICATIONINSIGHTS_CONNECTION_STRING = module.appinsights.connection_string
+  }
 }
+
+data "azurerm_client_config" "current" {}
+
+# ------------------------------------------------------
+# Shared infrastructure
+# ------------------------------------------------------
 
 module "rg" {
   source   = "./modules/resource_group"
@@ -48,17 +89,15 @@ module "appinsights" {
   tags                = local.tags
 }
 
-
 module "servicebus" {
-  source = "./modules/servicebus"
+  source = "./modules/service_bus"
 
-  name                = "sb-seu-ambiente"
-  location            = azurerm_resource_group.this.location
-  resource_group_name = azurerm_resource_group.this.name
+  name                = "sb-${local.compact_prefix}"
+  location            = module.rg.location
+  resource_group_name = module.rg.name
   topic_name          = "transaction-created"
-  subscription_name   = "consolidation-service"
-
-  tags = local.tags
+  subscription_names  = [var.servicebus_subscription_name]
+  tags                = local.tags
 }
 
 module "postgres" {
@@ -89,6 +128,10 @@ module "key_vault" {
   tags                        = local.tags
 }
 
+# ------------------------------------------------------
+# Entra / OIDC
+# ------------------------------------------------------
+
 module "entra_api" {
   source = "./modules/entra_api_app"
 
@@ -96,11 +139,11 @@ module "entra_api" {
   identifier_uri                 = "api://api-cashflow-dev-transaction-service"
   requested_access_token_version = 2
 
-  scope_value                         = "access_as_user"
-  scope_admin_consent_display_name    = "Access transaction service"
-  scope_admin_consent_description     = "Allows the application to access transaction service on behalf of the signed-in user."
-  scope_user_consent_display_name     = "Access transaction service"
-  scope_user_consent_description      = "Allow this application to access transaction service on your behalf."
+  scope_value                      = "access_as_user"
+  scope_admin_consent_display_name = "Access transaction service"
+  scope_admin_consent_description  = "Allows the application to access transaction service on behalf of the signed-in user."
+  scope_user_consent_display_name  = "Access transaction service"
+  scope_user_consent_description   = "Allow this application to access transaction service on your behalf."
 
   app_role_display_name = "Transaction Service Access"
   app_role_value        = "TransactionService.Access"
@@ -115,7 +158,6 @@ module "entra_postman_client_app" {
   api_scope_id  = module.entra_api.oauth2_scope_id
 }
 
-
 module "github_oidc" {
   source          = "./modules/github_oidc_app"
   display_name    = "gh-${local.prefix}-deploy"
@@ -124,6 +166,10 @@ module "github_oidc" {
   github_branch   = var.github_branch
   credential_name = "github-${var.github_branch}"
 }
+
+# ------------------------------------------------------
+# Shared secrets
+# ------------------------------------------------------
 
 resource "azurerm_key_vault_secret" "postgres_connection_string" {
   name         = "postgres-connection-string"
@@ -135,11 +181,15 @@ resource "azurerm_key_vault_secret" "postgres_connection_string" {
 
 resource "azurerm_key_vault_secret" "servicebus_connection_string" {
   name         = "servicebus-connection-string"
-  value        = module.service_bus.primary_connection_string
+  value        = module.servicebus.primary_connection_string
   key_vault_id = module.key_vault.id
 
   depends_on = [module.key_vault]
 }
+
+# ------------------------------------------------------
+# Transaction service
+# ------------------------------------------------------
 
 module "function" {
   source                                 = "./modules/function_app"
@@ -153,28 +203,7 @@ module "function" {
   tags                                   = local.tags
   environment                            = var.environment
   project_name                           = var.project_name
-
-  app_settings = {
-    FUNCTIONS_WORKER_RUNTIME              = "dotnet-isolated"
-    FUNCTIONS_EXTENSION_VERSION           = "~4"
-    ASPNETCORE_ENVIRONMENT                = var.environment
-    AzureWebJobsStorage__accountName      = module.storage.name
-    ServiceBus__TopicName                 = module.service_bus.topic_name
-    ServiceBus__FullyQualifiedNamespace   = module.service_bus.namespace_fqdn
-    ServiceBus__UseManagedIdentity        = "true"
-    ServiceBus__ConnectionString          = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.servicebus_connection_string.versionless_id})"
-    ConnectionStrings__Postgres           = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.postgres_connection_string.versionless_id})"
-    Authorization__Enabled                = "true"
-    Authorization__AllowedAppIds__0       = module.entra_postman_client_app.client_id
-    Authorization__AllowedAudiences__0    = module.entra_api.client_id
-    Authorization__AllowedAudiences__1    = "api://${module.entra_api.client_id}"
-    Authorization__AllowedIssuers__0      = "https://login.microsoftonline.com/${var.tenant_id}/v2.0"
-    Authorization__RequiredScopes__0      = "access_as_user"
-    APPLICATIONINSIGHTS_CONNECTION_STRING = module.appinsights.connection_string
-    # AzureWebJobsFeatureFlags              = "EnableWorkerIndexing"
-
-
-  }
+  app_settings                           = local.transaction_service_app_settings
 
   auth_settings = {
     enabled                = true
@@ -189,30 +218,45 @@ module "function" {
   ]
 }
 
+# ------------------------------------------------------
+# Consolidation service
+# ------------------------------------------------------
+
+module "consolidation_function" {
+  source                                 = "./modules/function_app"
+  name                                   = local.consolidation_function_name
+  resource_group_name                    = module.rg.name
+  location                               = module.rg.location
+  service_plan_id                        = module.plan.id
+  storage_account_name                   = module.storage.name
+  application_insights_connection_string = module.appinsights.connection_string
+  key_vault_reference_identity_id        = null
+  tags                                   = merge(local.tags, { workload = "consolidation-service" })
+  environment                            = var.environment
+  project_name                           = var.project_name
+  app_settings                           = local.consolidation_service_app_settings
+  auth_settings                          = null
+
+  depends_on = [
+    azurerm_key_vault_secret.postgres_connection_string,
+    azurerm_key_vault_secret.servicebus_connection_string
+  ]
+}
+
+# ------------------------------------------------------
+# RBAC - transaction service
+# ------------------------------------------------------
+
 module "rbac_service_bus_assignment" {
   source               = "./modules/role_assignments"
   principal_id         = module.function.principal_id
   role_definition_name = "Azure Service Bus Data Sender"
-  service_scope        = module.service_bus.id
+  service_scope        = module.servicebus.id
 }
 
 module "rbac_key_vault_assignment" {
   source               = "./modules/role_assignments"
   principal_id         = module.function.principal_id
-  role_definition_name = "Key Vault Secrets User"
-  service_scope        = module.key_vault.id
-}
-
-module "rbac_service_principal_assignment" {
-  source               = "./modules/role_assignments"
-  principal_id         = module.github_oidc.service_principal_object_id
-  role_definition_name = "Contributor"
-  service_scope        = "/subscriptions/${var.subscription_id}"
-}
-
-module "rbac_key_vault_assignment_principal_github_oidc" {
-  source               = "./modules/role_assignments"
-  principal_id         = module.github_oidc.service_principal_object_id
   role_definition_name = "Key Vault Secrets User"
   service_scope        = module.key_vault.id
 }
@@ -237,17 +281,81 @@ module "rbac_storage_account_contributor_assignment" {
   role_definition_name = "Storage Account Contributor"
   service_scope        = module.storage.id
 }
-module "rbac_storage_blob_data_contributor_assignment_github_oidc" {
-  source               = "./modules/role_assignments"
-  principal_id         = module.github_oidc.service_principal_object_id
-  role_definition_name = "Storage Blob Data Contributor"
-  service_scope        = module.storage.id
-}
-
 
 module "rbac_storage_table_data_contributor_assignment" {
   source               = "./modules/role_assignments"
   principal_id         = module.function.principal_id
   role_definition_name = "Storage Table Data Contributor"
+  service_scope        = module.storage.id
+}
+
+# ------------------------------------------------------
+# RBAC - consolidation service
+# ------------------------------------------------------
+
+module "rbac_service_bus_receiver_assignment_consolidation" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.consolidation_function.principal_id
+  role_definition_name = "Azure Service Bus Data Receiver"
+  service_scope        = module.servicebus.id
+}
+
+module "rbac_key_vault_assignment_consolidation" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.consolidation_function.principal_id
+  role_definition_name = "Key Vault Secrets User"
+  service_scope        = module.key_vault.id
+}
+
+module "rbac_storage_blob_owner_assignment_consolidation" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.consolidation_function.principal_id
+  role_definition_name = "Storage Blob Data Owner"
+  service_scope        = module.storage.id
+}
+
+module "rbac_storage_queue_contributor_assignment_consolidation" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.consolidation_function.principal_id
+  role_definition_name = "Storage Queue Data Contributor"
+  service_scope        = module.storage.id
+}
+
+module "rbac_storage_account_contributor_assignment_consolidation" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.consolidation_function.principal_id
+  role_definition_name = "Storage Account Contributor"
+  service_scope        = module.storage.id
+}
+
+module "rbac_storage_table_data_contributor_assignment_consolidation" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.consolidation_function.principal_id
+  role_definition_name = "Storage Table Data Contributor"
+  service_scope        = module.storage.id
+}
+
+# ------------------------------------------------------
+# RBAC - GitHub OIDC
+# ------------------------------------------------------
+
+module "rbac_service_principal_assignment" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.github_oidc.service_principal_object_id
+  role_definition_name = "Contributor"
+  service_scope        = "/subscriptions/${var.subscription_id}"
+}
+
+module "rbac_key_vault_assignment_principal_github_oidc" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.github_oidc.service_principal_object_id
+  role_definition_name = "Key Vault Secrets User"
+  service_scope        = module.key_vault.id
+}
+
+module "rbac_storage_blob_data_contributor_assignment_github_oidc" {
+  source               = "./modules/role_assignments"
+  principal_id         = module.github_oidc.service_principal_object_id
+  role_definition_name = "Storage Blob Data Contributor"
   service_scope        = module.storage.id
 }
