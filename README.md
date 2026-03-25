@@ -264,20 +264,18 @@ The architecture ensures that transaction ingestion remains stable under load, w
 
 ```mermaid
 flowchart LR
-    Client[Client / Postman / Consumer App] -->|Microsoft Entra access token| TxApi[Transaction Service<br/>Azure Functions]
-    TxApi --> Pg[(PostgreSQL)]
-    TxApi --> Outbox[(Outbox Table)]
-    Outbox --> Publisher[Outbox Publisher<br/>Timer Trigger]
+    Client[Client / Postman / Consumer App] -->|Microsoft Entra access token| TxApi[Transaction Service]
+    GitHub[GitHub Actions + OIDC] --> Azure[Azure Control Plane]
+
+    TxApi --> Pg[(PostgreSQL<br/>Transactions + Outbox Table)]
+    Pg --> Publisher[Timer-triggered Publisher]
     Publisher --> Sb[(Azure Service Bus Topic)]
-    Sb --> Consolidation[Consolidation Service<br/>Azure Functions]
+    Sb --> Consolidation[Consolidation Service]
     Consolidation --> Pg
+
     TxApi --> Ai[Application Insights]
     Consolidation --> Ai
-    GitHub[GitHub Actions + OIDC] --> Azure[Azure Control Plane]
-    Azure --> TxApi
-    Azure --> Consolidation
-    Azure --> Kv[Key Vault]
-    TxApi --> Kv
+    TxApi --> Kv[Key Vault]
     Consolidation --> Kv
 ```
 
