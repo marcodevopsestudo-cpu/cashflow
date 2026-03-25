@@ -47,9 +47,9 @@ public sealed class ProcessConsolidationBatchCommandHandler : IRequestHandler<Pr
     {
         using (_logger.BeginScope(new Dictionary<string, object>
         {
-            ["CorrelationId"] = request.Message.CorrelationId,
             ["BatchId"] = request.Message.BatchId,
-            ["MessageId"] = request.MessageId
+            ["TransactionIds"] = request.Message.TransactionIds,
+            ["CorrelationId"] = request.Message.CorrelationId
         }))
         {
             _logger.LogInformation(
