@@ -1,14 +1,3 @@
-Your current infra README is only a short inventory plus backend bootstrap commands. This replacement keeps those commands, but makes the infra doc actually help the evaluator understand why the Azure resources exist and how they reinforce the architecture. :contentReference[oaicite:2]{index=2}
-
----
-
-## 3) File: `non-functional-requirements.md`
-
-### Directory
-
-`/docs/non-functional-requirements.md`
-
-```md
 # Non-Functional Requirements
 
 This document explains how the current architecture addresses the main non-functional concerns of the challenge, especially:
@@ -292,4 +281,7 @@ The non-functional strategy of the solution is based on a clear priority order:
 5. make incomplete derived data visible and manageable.
 
 That priority is consistent with the challenge and with the architecture implemented in the repository.
+
+```
+
 ```
