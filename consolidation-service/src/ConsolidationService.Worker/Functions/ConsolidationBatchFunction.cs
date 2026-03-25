@@ -64,7 +64,7 @@ public sealed class ConsolidationBatchFunction
         CancellationToken cancellationToken)
     {
         var message = JsonSerializer.Deserialize<ConsolidationBatchMessage>(messageBody, SerializerOptions)
-            ?? throw new InvalidOperationException(ErrorMessages.InvalidServiceBusMessage);
+            ?? throw new InvalidOperationException(ErrorMessages.Worker.InvalidServiceBusMessage);
 
         var messageId = functionContext.BindingContext.BindingData.TryGetValue("MessageId", out var value)
             ? value?.ToString() ?? Guid.NewGuid().ToString("N")

@@ -1,7 +1,6 @@
 using ConsolidationService.Application.Abstractions;
 using ConsolidationService.Application.Commands.ProcessConsolidationBatch;
 using ConsolidationService.Application.Contracts;
-using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
@@ -26,12 +25,15 @@ public sealed class ProcessConsolidationBatchCommandHandlerTests
             workflow,
             NullLogger<ProcessConsolidationBatchCommandHandler>.Instance);
 
+
+        var guidA = Guid.NewGuid();
+        var guidB = Guid.NewGuid();
         var message = new ConsolidationBatchMessage
         {
             BatchId = Guid.NewGuid(),
             CorrelationId = "corr-002",
             PublishedAtUtc = DateTime.UtcNow,
-            TransactionIds = new[] { 10L, 11L }
+            TransactionIds = new[] { guidA, guidB }
         };
 
         var command = new ProcessConsolidationBatchCommand(message, "msg-002");

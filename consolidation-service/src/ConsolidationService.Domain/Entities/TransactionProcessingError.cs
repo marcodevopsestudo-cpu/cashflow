@@ -1,67 +1,46 @@
 namespace ConsolidationService.Domain.Entities;
 
 /// <summary>
-/// Represents a transaction or batch item that failed processing and requires manual investigation.
+/// Represents a transaction-level processing error that requires manual review or later inspection.
 /// </summary>
-/// <remarks>
-/// This entity is used to persist failure details for auditing, troubleshooting,
-/// and manual review workflows.
-/// </remarks>
 public sealed class TransactionProcessingError
 {
     /// <summary>
-    /// Gets or sets the unique identifier of the error record.
+    /// Gets the identifier of the transaction that failed processing.
     /// </summary>
-    public long Id { get; set; }
+    public Guid TransactionId { get; }
 
     /// <summary>
-    /// Gets or sets the identifier of the batch associated with the failure.
+    /// Gets the identifier of the batch associated with the transaction.
     /// </summary>
-    public Guid BatchId { get; set; }
+    public Guid BatchId { get; }
 
     /// <summary>
-    /// Gets or sets the identifier of the transaction associated with the failure, if applicable.
+    /// Gets the error message describing the reason for the failure.
     /// </summary>
-    public long? TransactionId { get; set; }
+    public string ErrorMessage { get; }
 
     /// <summary>
-    /// Gets or sets the correlation identifier used to trace the request across systems.
+    /// Gets the UTC timestamp indicating when the error occurred.
     /// </summary>
-    public string CorrelationId { get; set; } = string.Empty;
+    public DateTime OccurredOnUtc { get; }
 
     /// <summary>
-    /// Gets or sets the error code representing the type of failure.
+    /// Initializes a new instance of the <see cref="TransactionProcessingError"/> class.
     /// </summary>
-    /// <remarks>
-    /// Typically derived from the exception type or mapped to a domain-specific error code.
-    /// </remarks>
-    public string ErrorCode { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the human-readable error message describing the failure.
-    /// </summary>
-    public string ErrorMessage { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the stack trace associated with the failure, if available.
-    /// </summary>
-    public string? StackTrace { get; set; }
-
-    /// <summary>
-    /// Gets or sets the UTC timestamp indicating when the error was recorded.
-    /// </summary>
-    public DateTime CreatedAtUtc { get; set; }
-
-    /// <summary>
-    /// Gets or sets the number of retry attempts performed before the failure was recorded.
-    /// </summary>
-    public int RetryCount { get; set; }
-
-    /// <summary>
-    /// Gets or sets the current status of the error processing workflow.
-    /// </summary>
-    /// <remarks>
-    /// Indicates whether the error is pending review, resolved, or reprocessed.
-    /// </remarks>
-    public string Status { get; set; } = string.Empty;
+    /// <param name="transactionId">The identifier of the transaction that failed.</param>
+    /// <param name="batchId">The identifier of the batch.</param>
+    /// <param name="errorMessage">The error message describing the failure.</param>
+    /// <param name="occurredOnUtc">The UTC timestamp when the error occurred.</param>
+    public TransactionProcessingError(
+        Guid transactionId,
+        Guid batchId,
+        string errorMessage,
+        DateTime occurredOnUtc)
+    {
+        TransactionId = transactionId;
+        BatchId = batchId;
+        ErrorMessage = errorMessage;
+        OccurredOnUtc = occurredOnUtc;
+    }
 }

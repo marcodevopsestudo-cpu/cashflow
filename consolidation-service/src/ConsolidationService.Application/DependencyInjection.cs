@@ -45,6 +45,7 @@ public static class DependencyInjection
 
         services.AddScoped<RegisterBatchStep>();
         services.AddScoped<LoadTransactionsStep>();
+        services.AddScoped<ValidateTransactionsStep>();
         services.AddScoped<AggregateTransactionsStep>();
         services.AddScoped<UpsertDailyBalanceStep>();
         services.AddScoped<FinalizeBatchStep>();

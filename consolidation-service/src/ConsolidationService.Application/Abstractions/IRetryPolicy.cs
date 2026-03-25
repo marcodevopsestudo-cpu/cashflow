@@ -1,3 +1,4 @@
+namespace ConsolidationService.Application.Abstractions;
 
 /// <summary>
 /// Defines a policy for executing operations with retry logic using exponential backoff.
