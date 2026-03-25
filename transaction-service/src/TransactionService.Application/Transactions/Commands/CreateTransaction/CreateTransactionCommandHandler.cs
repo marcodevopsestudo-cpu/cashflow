@@ -57,11 +57,6 @@ public sealed class CreateTransactionCommandHandler(
         var requestHash = _requestHashService.ComputeHash(request);
 
         _logger.CreateTransactionStarted(request.AccountId, request.CorrelationId, request.IdempotencyKey);
-        _logger.LogInformation(
-            "CreateTransaction started. AccountId={AccountId}, CorrelationId={CorrelationId}, IdempotencyKey={IdempotencyKey}",
-            request.AccountId,
-            request.CorrelationId,
-            request.IdempotencyKey);
 
         var existing = await _idempotencyRepository.GetByKeyAsync(request.IdempotencyKey, cancellationToken);
 
@@ -120,7 +115,7 @@ public sealed class CreateTransactionCommandHandler(
         {
             _logger.LogWarning(
                 ex,
-                "CreateTransaction concurrency detected. CorrelationId={CorrelationId}, IdempotencyKey={IdempotencyKey}",
+                MessageCatalog.Logs.CreateTransactionConcurrencyDetected,
                 request.CorrelationId,
                 request.IdempotencyKey);
 
@@ -130,7 +125,7 @@ public sealed class CreateTransactionCommandHandler(
             {
                 _logger.LogError(
                     ex,
-                    "CreateTransaction concurrency anomaly. Unique violation occurred but the idempotency entry was not found afterwards. CorrelationId={CorrelationId}, IdempotencyKey={IdempotencyKey}",
+                    MessageCatalog.Logs.CreateTransactionConcurrencyAnomaly,
                     request.CorrelationId,
                     request.IdempotencyKey);
 
@@ -143,7 +138,7 @@ public sealed class CreateTransactionCommandHandler(
         {
             _logger.LogError(
                 ex,
-                "CreateTransaction persistence failure. CorrelationId={CorrelationId}, IdempotencyKey={IdempotencyKey}, TransactionId={TransactionId}, OutboxMessageId={OutboxMessageId}",
+                MessageCatalog.Logs.CreateTransactionPersistenceFailure,
                 request.CorrelationId,
                 request.IdempotencyKey,
                 transaction.TransactionId,
@@ -153,7 +148,7 @@ public sealed class CreateTransactionCommandHandler(
             {
                 _logger.LogError(
                     pgEx,
-                    "CreateTransaction postgres failure. SqlState={SqlState}, ConstraintName={ConstraintName}, TableName={TableName}, ColumnName={ColumnName}",
+                    MessageCatalog.Logs.CreateTransactionPostgresFailure,
                     pgEx.SqlState,
                     pgEx.ConstraintName,
                     pgEx.TableName,
@@ -164,11 +159,6 @@ public sealed class CreateTransactionCommandHandler(
         }
 
         _logger.CreateTransactionPersisted(transaction.TransactionId, outboxMessage.Id, request.CorrelationId);
-        _logger.LogInformation(
-            "CreateTransaction completed. TransactionId={TransactionId}, OutboxMessageId={OutboxMessageId}, CorrelationId={CorrelationId}",
-            transaction.TransactionId,
-            outboxMessage.Id,
-            request.CorrelationId);
 
         var dto = transaction.ToDto();
 

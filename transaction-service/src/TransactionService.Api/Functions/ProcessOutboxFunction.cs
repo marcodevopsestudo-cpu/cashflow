@@ -29,7 +29,7 @@ public sealed class ProcessOutboxFunction(IMediator mediator, ILogger<ProcessOut
         var result = await _mediator.Send(new ProcessOutboxCommand(BatchSize, correlationId), cancellationToken);
 
         _logger.LogInformation(
-            ApiMessageCatalog.OutboxProcessingCompleted,
+            ApiMessageCatalog.Logs.OutboxProcessingCompleted,
             timer.ScheduleStatus?.Next,
             result.ProcessedItems);
     }

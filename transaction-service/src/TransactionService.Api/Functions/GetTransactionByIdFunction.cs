@@ -31,7 +31,6 @@ public sealed class GetTransactionByIdFunction(IMediator mediator)
         Guid transactionId,
         CancellationToken cancellationToken)
     {
-        
         var result = await _mediator.Send(new GetTransactionByIdQuery(transactionId), cancellationToken);
         return await request.CreateJsonResponseAsync(HttpStatusCode.OK, result.ToResponse(), cancellationToken);
     }

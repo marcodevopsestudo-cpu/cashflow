@@ -2,8 +2,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransactionService.Domain.Entities;
 
+/// <summary>
+/// Configures the database mapping for the <see cref="Transaction"/> entity.
+/// </summary>
 public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
 {
+    /// <summary>
+    /// Configures the entity properties, keys, and column mappings for <see cref="Transaction"/>.
+    /// </summary>
+    /// <param name="builder">The builder used to configure the entity.</param>
     public void Configure(EntityTypeBuilder<Transaction> builder)
     {
         builder.ToTable("transactions", "transaction");

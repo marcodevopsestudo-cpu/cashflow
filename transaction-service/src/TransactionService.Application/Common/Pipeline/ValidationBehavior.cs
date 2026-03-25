@@ -57,7 +57,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         }
 
         var message = string.Join(" | ", failures.Distinct());
-        _logger.LogWarning("Validation failure for {RequestName}: {Message}", typeof(TRequest).Name, message);
+        _logger.LogWarning(MessageCatalog.Logs.ValidationFailure, typeof(TRequest).Name, message);
         throw new ValidationApplicationException($"{MessageCatalog.InvalidPayload} {message}");
     }
 }

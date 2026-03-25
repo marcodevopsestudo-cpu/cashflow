@@ -1,13 +1,12 @@
-using System.Net;
 using MediatR;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using System.Net;
 using TransactionService.Api.Common.Constants;
 using TransactionService.Api.Common.Extensions;
 using TransactionService.Api.Contracts.Requests;
 using TransactionService.Application.Common.Diagnostics;
-using TransactionService.Api.Resources;
 using TransactionService.Application.Transactions.Commands.CreateTransaction;
 
 namespace TransactionService.Api.Functions;
@@ -59,7 +58,6 @@ public sealed class CreateTransactionFunction
 
         var result = await _mediator.Send(command, cancellationToken);
 
-        _logger.LogInformation("Passou pelo Send");
 
         var statusCode = result.IsIdempotentReplay
             ? HttpStatusCode.OK
@@ -79,11 +77,7 @@ public sealed class CreateTransactionFunction
         }
 
 
-        _logger.LogInformation("Add headers");
-
         await response.WriteAsJsonAsync(result, statusCode, cancellationToken);
-
-        _logger.LogInformation("write response as json");
 
         _logger.CreateTransactionFunctionCompleted(result.Transaction.Id, correlationId, result.IsIdempotentReplay);
         

@@ -2,8 +2,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransactionService.Domain.Entities;
 
+/// <summary>
+/// Configures the database mapping for the <see cref="OutboxMessage"/> entity.
+/// </summary>
 public class OutboxMessageConfiguration : IEntityTypeConfiguration<OutboxMessage>
 {
+    /// <summary>
+    /// Configures the entity properties, keys, and indexes for <see cref="OutboxMessage"/>.
+    /// </summary>
+    /// <param name="builder">The builder used to configure the entity.</param>
     public void Configure(EntityTypeBuilder<OutboxMessage> builder)
     {
         builder.ToTable("outbox_messages", "transaction");

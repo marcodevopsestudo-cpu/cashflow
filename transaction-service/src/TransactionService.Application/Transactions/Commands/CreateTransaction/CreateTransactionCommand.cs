@@ -1,5 +1,4 @@
 using MediatR;
-using TransactionService.Application.Transactions.Common;
 
 namespace TransactionService.Application.Transactions.Commands.CreateTransaction;
 
