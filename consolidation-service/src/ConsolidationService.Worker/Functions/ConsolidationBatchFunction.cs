@@ -62,6 +62,8 @@ public sealed class ConsolidationBatchFunction
         string messageBody,
         FunctionContext functionContext,
         CancellationToken cancellationToken)
+
+
     {
         var message = JsonSerializer.Deserialize<ConsolidationBatchMessage>(messageBody, SerializerOptions)
             ?? throw new InvalidOperationException(ErrorMessages.Worker.InvalidServiceBusMessage);
@@ -88,4 +90,6 @@ public sealed class ConsolidationBatchFunction
                 cancellationToken);
         }
     }
+
+   
 }

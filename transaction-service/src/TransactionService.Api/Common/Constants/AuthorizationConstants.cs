@@ -24,4 +24,6 @@ public static class AuthorizationConstants
     /// Key used to store or retrieve the caller roles from the request context.
     /// </summary>
     public const string CallerRolesItemKey = "CallerRoles";
+
+
 }
