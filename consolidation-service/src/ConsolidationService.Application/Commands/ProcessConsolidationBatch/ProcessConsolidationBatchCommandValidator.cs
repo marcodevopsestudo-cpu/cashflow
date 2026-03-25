@@ -22,11 +22,11 @@ public sealed class ProcessConsolidationBatchCommandValidator : AbstractValidato
             .NotEmpty()
             .WithMessage(ValidationMessages.Command.BatchIdRequired);
 
-        RuleFor(x => x.Message.CorrelationId)
-            .NotEmpty()
-            .WithMessage(ValidationMessages.Command.CorrelationIdRequired)
-            .MaximumLength(64)
-            .WithMessage(ValidationMessages.Command.CorrelationIdTooLong);
+        //RuleFor(x => x.Message.CorrelationId)
+        //    .NotEmpty()
+        //    .WithMessage(ValidationMessages.Command.CorrelationIdRequired)
+        //    .MaximumLength(64)
+        //    .WithMessage(ValidationMessages.Command.CorrelationIdTooLong);
 
         RuleFor(x => x.Message.TransactionIds)
             .NotEmpty()
@@ -36,8 +36,8 @@ public sealed class ProcessConsolidationBatchCommandValidator : AbstractValidato
             .NotEmpty()
             .WithMessage(ValidationMessages.Command.TransactionIdRequired);
 
-        RuleFor(x => x.MessageId)
-            .NotEmpty()
-            .WithMessage(ValidationMessages.Command.MessageIdRequired);
+        //RuleFor(x => x.MessageId)
+        //    .NotEmpty()
+        //    .WithMessage(ValidationMessages.Command.MessageIdRequired);
     }
 }
