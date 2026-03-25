@@ -48,13 +48,17 @@ module "appinsights" {
   tags                = local.tags
 }
 
-module "service_bus" {
-  source              = "./modules/service_bus"
-  name                = substr("sb${local.compact_prefix}", 0, 50)
-  topic_name          = var.servicebus_topic_name
-  resource_group_name = module.rg.name
-  location            = module.rg.location
-  tags                = local.tags
+
+module "servicebus" {
+  source = "./modules/servicebus"
+
+  name                = "sb-seu-ambiente"
+  location            = azurerm_resource_group.this.location
+  resource_group_name = azurerm_resource_group.this.name
+  topic_name          = "transaction-created"
+  subscription_name   = "consolidation-service"
+
+  tags = local.tags
 }
 
 module "postgres" {
