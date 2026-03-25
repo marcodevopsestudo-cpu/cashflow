@@ -1,8 +1,8 @@
 using ConsolidationService.Application.Abstractions;
-using ConsolidationService.Infrastructure.Configuration;
 using ConsolidationService.Infrastructure.Data;
 using ConsolidationService.Infrastructure.Persistence;
 using ConsolidationService.Infrastructure.Resilience;
+using ConsolidationService.Infrastructure.Resources;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -33,8 +33,17 @@ public static class InfrastructureDependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.Configure<PostgresOptions>(
-            configuration.GetSection(PostgresOptions.SectionName));
+        var connectionString =
+        configuration.GetConnectionString("Postgres") ??
+        configuration["ConnectionStrings__Postgres"] ??
+        configuration["ConnectionStrings:Postgres"] ??
+        configuration["Values:ConnectionStrings__Postgres"];
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                InfrastructureMessageCatalog.PostgresConnectionStringNotFound);
+        }
 
         services.AddSingleton<NpgsqlConnectionFactory>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
