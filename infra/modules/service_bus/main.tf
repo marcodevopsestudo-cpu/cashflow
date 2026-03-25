@@ -11,6 +11,12 @@ resource "azurerm_servicebus_topic" "this" {
   namespace_id = azurerm_servicebus_namespace.this.id
 }
 
+resource "azurerm_servicebus_subscription" "this" {
+  name               = var.subscription_name
+  topic_id           = azurerm_servicebus_topic.this.id
+  max_delivery_count = var.max_delivery_count
+}
+
 resource "azurerm_servicebus_namespace_authorization_rule" "app" {
   name         = "transaction-service"
   namespace_id = azurerm_servicebus_namespace.this.id
