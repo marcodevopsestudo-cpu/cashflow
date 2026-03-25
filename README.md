@@ -277,3 +277,25 @@ flowchart LR
     TxApi --> Kv
     Consolidation --> Kv
 ```
+
+## Implementation Status
+
+This solution focuses on demonstrating architectural decisions and system design aligned with the requirements.
+
+The core flows are implemented and functional, including:
+
+- Transaction ingestion
+- Reliable event publishing (Outbox)
+- Asynchronous consolidation
+- Daily balance aggregation
+- Query API for consolidated data
+
+Some aspects were intentionally left as next steps or partially validated:
+
+- Full end-to-end validation under load
+- Automated load testing for throughput verification (≥ 50 req/s)
+- Extended integration testing across services
+
+These decisions were made to prioritize clarity of architecture, separation of concerns, and non-functional requirement strategies.
+
+The current implementation demonstrates how the system behaves and scales, even if not all scenarios were exhaustively tested.
