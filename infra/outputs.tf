@@ -35,15 +35,15 @@ output "postgres_server_fqdn" {
 }
 
 output "service_bus_namespace" {
-  value = module.service_bus.namespace_name
+  value = module.servicebus.namespace_name
 }
 
 output "service_bus_topic_name" {
-  value = module.service_bus.topic_name
+  value = module.servicebus.topic_name
 }
 
 output "service_bus_subscription_names" {
-  value = module.service_bus.subscription_names
+  value = module.servicebus.subscription_names
 }
 
 output "entra_api_client_id" {

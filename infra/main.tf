@@ -48,8 +48,6 @@ locals {
   }
 }
 
-data "azurerm_client_config" "current" {}
-
 # ------------------------------------------------------
 # Shared infrastructure
 # ------------------------------------------------------
@@ -204,7 +202,7 @@ module "function" {
   environment                            = var.environment
   project_name                           = var.project_name
   app_settings                           = local.transaction_service_app_settings
-
+  public_network_access_enabled          = true
   auth_settings = {
     enabled                = true
     client_id              = module.entra_api.client_id
@@ -236,7 +234,7 @@ module "consolidation_function" {
   project_name                           = var.project_name
   app_settings                           = local.consolidation_service_app_settings
   auth_settings                          = null
-
+  public_network_access_enabled          = false
   depends_on = [
     azurerm_key_vault_secret.postgres_connection_string,
     azurerm_key_vault_secret.servicebus_connection_string
