@@ -107,6 +107,109 @@ public sealed class CreateTransactionFunctionTests
 
         
     }
+
+    [Fact]
+    public async Task Run_ShouldReturnCreatedWithoutReplayHeader_WhenRequestIsNew()
+    {
+        // Arrange
+        var mediator = new Mock<IMediator>();
+        var now = DateTime.UtcNow;
+        var transactionId = Guid.NewGuid();
+
+        mediator
+            .Setup(x => x.Send(It.IsAny<CreateTransactionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateTransactionResult(
+                new TransactionDto(
+                    transactionId,
+                    "ACC-001",
+                    TransactionKind.Credit,
+                    100m,
+                    "BRL",
+                    now,
+                    "Initial deposit",
+                    "Received",
+                    "corr-1",
+                    now,
+                    null),
+                false));
+
+        var function = new CreateTransactionFunction(
+            mediator.Object,
+            NullLogger<CreateTransactionFunction>.Instance);
+
+        var context = new FakeFunctionContext();
+        context.Items[CorrelationConstants.CorrelationIdItemKey] = "corr-1";
+        context.SetIdempotencyKey("idem-1");
+
+        var request = new FakeHttpRequestData(context, new CreateTransactionRequest
+        {
+            AccountId = "ACC-001",
+            Kind = "Credit",
+            Amount = 100m,
+            Currency = "BRL",
+            TransactionDateUtc = now,
+            Description = "Initial deposit"
+        }, HttpMethod.Post.Method);
+
+        // Act
+        var response = await function.Run(request, context, CancellationToken.None);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        response.Headers.TryGetValues(IdempotencyConstants.IdempotencyHeaderName, out var idempotencyValues).Should().BeTrue();
+        idempotencyValues!.Single().Should().Be("idem-1");
+        response.Headers.TryGetValues(IdempotencyConstants.IdempotencyReplayedHeaderName, out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Run_ShouldNotAddIdempotencyHeader_WhenKeyWasNotResolved()
+    {
+        // Arrange
+        var mediator = new Mock<IMediator>();
+        var now = DateTime.UtcNow;
+
+        mediator
+            .Setup(x => x.Send(It.IsAny<CreateTransactionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateTransactionResult(
+                new TransactionDto(
+                    Guid.NewGuid(),
+                    "ACC-001",
+                    TransactionKind.Credit,
+                    100m,
+                    "BRL",
+                    now,
+                    "Initial deposit",
+                    "Received",
+                    "corr-1",
+                    now,
+                    null),
+                false));
+
+        var function = new CreateTransactionFunction(
+            mediator.Object,
+            NullLogger<CreateTransactionFunction>.Instance);
+
+        var context = new FakeFunctionContext();
+        context.Items[CorrelationConstants.CorrelationIdItemKey] = "corr-1";
+
+        var request = new FakeHttpRequestData(context, new CreateTransactionRequest
+        {
+            AccountId = "ACC-001",
+            Kind = "Credit",
+            Amount = 100m,
+            Currency = "BRL",
+            TransactionDateUtc = now,
+            Description = "Initial deposit"
+        }, HttpMethod.Post.Method);
+
+        // Act
+        var response = await function.Run(request, context, CancellationToken.None);
+
+        // Assert
+        response.Headers.TryGetValues(IdempotencyConstants.IdempotencyHeaderName, out _).Should().BeFalse();
+        response.Headers.TryGetValues(IdempotencyConstants.IdempotencyReplayedHeaderName, out _).Should().BeFalse();
+    }
+
     /// <summary>
     /// Fake implementation of <see cref="FunctionContext"/> for testing purposes.
     /// </summary>

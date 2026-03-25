@@ -19,13 +19,13 @@ public sealed class PingFunction
     /// An <see cref="HttpResponseData"/> with status code 200 (OK) and a "pong" message.
     /// </returns>
     [Function("PingFunction")]
-    public HttpResponseData Run(
+    public async Task<HttpResponseData> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "ping")] HttpRequestData request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         var response = request.CreateResponse(HttpStatusCode.OK);
-        response.WriteStringAsync(ResponseMessage);
+        await response.WriteStringAsync(ResponseMessage);
 
         return response;
     }

@@ -19,13 +19,11 @@ public sealed class AzureServiceBusEventPublisher : IIntegrationEventPublisher, 
     private readonly Lazy<ServiceBusClient> _client;
     private readonly Lazy<ServiceBusSender> _sender;
     private readonly ILogger<AzureServiceBusEventPublisher> _logger;
+    private readonly string _topicName;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AzureServiceBusEventPublisher"/> class.
-    /// </summary>
-    /// <param name="options">The configured options.</param>
-    /// <param name="logger">The logger.</param>
-    public AzureServiceBusEventPublisher(IOptions<ServiceBusOptions> options, ILogger<AzureServiceBusEventPublisher> logger)
+    public AzureServiceBusEventPublisher(
+        IOptions<ServiceBusOptions> options,
+        ILogger<AzureServiceBusEventPublisher> logger)
     {
         var settings = options.Value;
         _logger = logger;
@@ -35,62 +33,52 @@ public sealed class AzureServiceBusEventPublisher : IIntegrationEventPublisher, 
             throw new InvalidOperationException(MessageCatalog.ServiceBusTopicRequired);
         }
 
+        _topicName = settings.TopicName;
+
         _client = new Lazy<ServiceBusClient>(() => CreateClient(settings));
         _sender = new Lazy<ServiceBusSender>(() => _client.Value.CreateSender(settings.TopicName));
     }
 
     /// <summary>
-    /// Publishes the specified integration event.
+    /// Publishes lightweight transaction batch (BatchId + TransactionIds).
     /// </summary>
-    /// <param name="integrationEvent">The event to publish.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    public Task PublishAsync(IIntegrationEvent integrationEvent, CancellationToken cancellationToken)
-    {
-        var payload = JsonSerializer.Serialize(integrationEvent, integrationEvent.GetType());
-
-        var storedEvent = new StoredIntegrationEvent(
-            integrationEvent.EventId,
-            integrationEvent.EventName,
-            integrationEvent.EventVersion,
-            integrationEvent.AggregateId,
-            integrationEvent.CorrelationId,
-            integrationEvent.OccurredOnUtc,
-            payload);
-
-        return PublishAsync(storedEvent, cancellationToken);
-    }
-
     public async Task PublishBatchAsync(
-    StoredIntegrationEventBatch message,
-    CancellationToken cancellationToken)
+        TransactionBatchMessage message,
+        CancellationToken cancellationToken)
     {
         var payload = JsonSerializer.Serialize(message);
 
         var serviceBusMessage = new ServiceBusMessage(payload)
         {
             MessageId = message.BatchId.ToString(),
-            Subject = "OutboxBatch",
+            Subject = "TransactionBatch",
             ContentType = "application/json"
         };
 
         serviceBusMessage.ApplicationProperties["batchId"] = message.BatchId;
-        serviceBusMessage.ApplicationProperties["occurredOnUtc"] = message.OccurredOnUtc;
-        serviceBusMessage.ApplicationProperties["transactionCount"] = message.Transactions.Count;
+        serviceBusMessage.ApplicationProperties["transactionCount"] = message.TransactionIds.Count;
+
+        _logger.LogInformation(
+            InfrastructureMessageCatalog.Logs.SendingTransactionBatch,
+            _client.Value.FullyQualifiedNamespace,
+            _topicName,
+            message.BatchId,
+            message.TransactionIds.Count);
 
         await _sender.Value.SendMessageAsync(serviceBusMessage, cancellationToken);
 
         _logger.LogInformation(
-            "Integration event batch published to Service Bus. BatchId: {BatchId}, Count: {Count}",
+            InfrastructureMessageCatalog.Logs.TransactionBatchPublished,
             message.BatchId,
-            message.Transactions.Count);
+            message.TransactionIds.Count);
     }
 
     /// <summary>
-    /// Publishes the specified stored integration event payload.
+    /// Publishes individual integration event (fallback).
     /// </summary>
-    /// <param name="integrationEvent">The stored event to publish.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    public async Task PublishAsync(StoredIntegrationEvent integrationEvent, CancellationToken cancellationToken)
+    public async Task PublishAsync(
+        StoredIntegrationEvent integrationEvent,
+        CancellationToken cancellationToken)
     {
         var message = new ServiceBusMessage(Encoding.UTF8.GetBytes(integrationEvent.Payload))
         {
@@ -114,9 +102,6 @@ public sealed class AzureServiceBusEventPublisher : IIntegrationEventPublisher, 
         await _sender.Value.SendMessageAsync(message, cancellationToken);
     }
 
-    /// <summary>
-    /// Disposes Service Bus resources.
-    /// </summary>
     public async ValueTask DisposeAsync()
     {
         if (_sender.IsValueCreated)

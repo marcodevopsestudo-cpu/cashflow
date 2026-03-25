@@ -55,7 +55,7 @@ public sealed class OutboxProcessor : IOutboxProcessor
         }
 
         _logger.LogInformation(
-            "Pending outbox messages retrieved. Count={Count}, BatchSize={BatchSize}, MessageIds={MessageIds}",
+            OutboxMessageCatalog.PendingMessagesRetrieved,
             messages.Count,
             batchSize,
             string.Join(",", messages.Select(message => message.Id)));
@@ -64,7 +64,7 @@ public sealed class OutboxProcessor : IOutboxProcessor
         var processedCount = 0;
 
         _logger.LogInformation(
-            "Starting grouped outbox processing. PublishChunkSize={PublishChunkSize}, TotalMessages={TotalMessages}",
+            OutboxMessageCatalog.GroupedProcessingStarted,
             publishChunkSize,
             messages.Count);
 
@@ -76,7 +76,7 @@ public sealed class OutboxProcessor : IOutboxProcessor
         _logger.LogInformation(OutboxMessageCatalog.ProcessingFinished, processedCount);
 
         _logger.LogInformation(
-            "Outbox grouped processing finished. TotalMessages={TotalMessages}, SuccessfullyProcessed={SuccessfullyProcessed}, Remaining={Remaining}",
+            OutboxMessageCatalog.GroupedProcessingFinished,
             messages.Count,
             processedCount,
             messages.Count - processedCount);
@@ -98,27 +98,28 @@ public sealed class OutboxProcessor : IOutboxProcessor
         var batchEvent = MapToBatchIntegrationEvent(messages);
 
         _logger.LogInformation(
-            "Processing outbox batch. Count={Count}, MessageIds={MessageIds}, CorrelationIds={CorrelationIds}",
+            OutboxMessageCatalog.BatchProcessingStarted,
             messages.Count,
             string.Join(",", messages.Select(message => message.Id)),
-            string.Join(",", messages.Select(message => message.CorrelationId)));
+            string.Join(",", messages.Select(message => message.CorrelationId)),
+            string.Join(",", messages.Select(message => message.AggregateId)));
 
         try
         {
             _logger.LogDebug(
-                "Publishing outbox batch to integration bus. Count={Count}, BatchEventId={BatchEventId}",
+                OutboxMessageCatalog.PublishingBatchToBus,
                 messages.Count,
                 batchEvent.BatchId);
 
             await _publisher.PublishBatchAsync(batchEvent, cancellationToken);
 
             _logger.LogInformation(
-                "Outbox batch publish returned successfully. Count={Count}, BatchEventId={BatchEventId}",
+                OutboxMessageCatalog.BatchPublishReturnedSuccessfully,
                 messages.Count,
                 batchEvent.BatchId);
 
             _logger.LogDebug(
-                "Marking outbox batch messages as processed. Count={Count}, BatchEventId={BatchEventId}",
+                OutboxMessageCatalog.MarkingBatchAsProcessed,
                 messages.Count,
                 batchEvent.BatchId);
 
@@ -132,9 +133,10 @@ public sealed class OutboxProcessor : IOutboxProcessor
                     message.CorrelationId);
 
                 _logger.LogDebug(
-                    "Outbox message marked as processed after batch publish. MessageId={MessageId}, CorrelationId={CorrelationId}",
+                    OutboxMessageCatalog.MessageMarkedAsProcessedAfterBatch,
                     message.Id,
-                    message.CorrelationId);
+                    message.CorrelationId,
+                    message.AggregateId);
             }
 
             return messages.Count;
@@ -143,10 +145,11 @@ public sealed class OutboxProcessor : IOutboxProcessor
         {
             _logger.LogError(
                 ex,
-                "Batch publish failed. Falling back to individual processing. Count={Count}, MessageIds={MessageIds}, CorrelationIds={CorrelationIds}",
+                OutboxMessageCatalog.BatchPublishFailedDetailed,
                 messages.Count,
                 string.Join(",", messages.Select(message => message.Id)),
-                string.Join(",", messages.Select(message => message.CorrelationId)));
+                string.Join(",", messages.Select(message => message.CorrelationId)),
+                string.Join(",", messages.Select(message => message.AggregateId)));
 
             _logger.LogError(ex, OutboxMessageCatalog.BatchPublishFailedFallback);
 
@@ -167,7 +170,7 @@ public sealed class OutboxProcessor : IOutboxProcessor
         var processedCount = 0;
 
         _logger.LogInformation(
-            "Starting individual fallback processing for outbox messages. Count={Count}, MessageIds={MessageIds}",
+            OutboxMessageCatalog.IndividualFallbackStarted,
             messages.Count,
             string.Join(",", messages.Select(message => message.Id)));
 
@@ -180,7 +183,7 @@ public sealed class OutboxProcessor : IOutboxProcessor
         }
 
         _logger.LogInformation(
-            "Individual fallback processing finished. Attempted={Attempted}, Succeeded={Succeeded}, Failed={Failed}",
+            OutboxMessageCatalog.IndividualFallbackFinished,
             messages.Count,
             processedCount,
             messages.Count - processedCount);
@@ -201,7 +204,7 @@ public sealed class OutboxProcessor : IOutboxProcessor
         try
         {
             _logger.LogDebug(
-                "Publishing single outbox message. MessageId={MessageId}, CorrelationId={CorrelationId}, EventName={EventName}, AggregateId={AggregateId}",
+                OutboxMessageCatalog.PublishingSingleMessage,
                 message.Id,
                 message.CorrelationId,
                 message.EventName,
@@ -212,12 +215,12 @@ public sealed class OutboxProcessor : IOutboxProcessor
             await _publisher.PublishAsync(integrationEvent, cancellationToken);
 
             _logger.LogInformation(
-                "Single outbox message published successfully. MessageId={MessageId}, CorrelationId={CorrelationId}",
+                OutboxMessageCatalog.SingleMessagePublishedSuccessfully,
                 message.Id,
                 message.CorrelationId);
 
             _logger.LogDebug(
-                "Marking single outbox message as processed. MessageId={MessageId}, CorrelationId={CorrelationId}",
+                OutboxMessageCatalog.MarkingSingleMessageAsProcessed,
                 message.Id,
                 message.CorrelationId);
 
@@ -242,7 +245,7 @@ public sealed class OutboxProcessor : IOutboxProcessor
 
             _logger.LogError(
                 ex,
-                "Failed to publish and process single outbox message. MessageId={MessageId}, CorrelationId={CorrelationId}, EventName={EventName}, AggregateId={AggregateId}",
+                OutboxMessageCatalog.SingleMessageFailedDetailed,
                 message.Id,
                 message.CorrelationId,
                 message.EventName,
@@ -264,7 +267,7 @@ public sealed class OutboxProcessor : IOutboxProcessor
         foreach (var message in messages)
         {
             _logger.LogDebug(
-                "Setting ProcessedOnUtc for outbox message in batch. MessageId={MessageId}, CorrelationId={CorrelationId}",
+                OutboxMessageCatalog.SettingProcessedOnUtcForBatchMessage,
                 message.Id,
                 message.CorrelationId);
 
@@ -272,7 +275,7 @@ public sealed class OutboxProcessor : IOutboxProcessor
         }
 
         _logger.LogDebug(
-            "Persisting processed batch messages. Count={Count}, MessageIds={MessageIds}",
+            OutboxMessageCatalog.PersistingProcessedBatchMessages,
             messages.Count,
             string.Join(",", messages.Select(message => message.Id)));
 
@@ -280,7 +283,7 @@ public sealed class OutboxProcessor : IOutboxProcessor
         await _outboxRepository.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
-            "Processed batch messages persisted successfully. Count={Count}, MessageIds={MessageIds}",
+            OutboxMessageCatalog.ProcessedBatchPersistedSuccessfully,
             messages.Count,
             string.Join(",", messages.Select(message => message.Id)));
     }
@@ -295,7 +298,7 @@ public sealed class OutboxProcessor : IOutboxProcessor
         CancellationToken cancellationToken)
     {
         _logger.LogDebug(
-            "Setting ProcessedOnUtc for single outbox message. MessageId={MessageId}, CorrelationId={CorrelationId}",
+            OutboxMessageCatalog.SettingProcessedOnUtcForSingleMessage,
             message.Id,
             message.CorrelationId);
 
@@ -305,7 +308,7 @@ public sealed class OutboxProcessor : IOutboxProcessor
         await _outboxRepository.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
-            "Single processed outbox message persisted successfully. MessageId={MessageId}, CorrelationId={CorrelationId}",
+            OutboxMessageCatalog.SingleProcessedPersistedSuccessfully,
             message.Id,
             message.CorrelationId);
     }
@@ -322,7 +325,7 @@ public sealed class OutboxProcessor : IOutboxProcessor
         CancellationToken cancellationToken)
     {
         _logger.LogWarning(
-            "Marking outbox message as failed. MessageId={MessageId}, CorrelationId={CorrelationId}, Error={Error}",
+            OutboxMessageCatalog.MarkingMessageAsFailed,
             message.Id,
             message.CorrelationId,
             exception.Message);
@@ -333,35 +336,21 @@ public sealed class OutboxProcessor : IOutboxProcessor
         await _outboxRepository.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
-            "Failed outbox message persisted successfully. MessageId={MessageId}, CorrelationId={CorrelationId}",
+            OutboxMessageCatalog.FailedMessagePersistedSuccessfully,
             message.Id,
             message.CorrelationId);
     }
 
     /// <summary>
-    /// Maps a collection of outbox messages to a batch integration event.
+    /// Maps a collection of outbox messages to a lightweight batch integration event.
+    /// Publishes only the batch identifier and the transaction identifiers.
     /// </summary>
     /// <param name="messages">The messages to map.</param>
-    /// <returns>The batch integration event.</returns>
-    private static StoredIntegrationEventBatch MapToBatchIntegrationEvent(
-        IReadOnlyCollection<OutboxMessage> messages)
-    {
-        return new StoredIntegrationEventBatch(
-            Guid.NewGuid(),
-            "TransactionCreated",
-            1,
-            DateTime.UtcNow,
-            messages.Select(message => new StoredIntegrationEventBatchItem(
-                message.Id,
-                message.EventName,
-                message.EventVersion,
-                message.AggregateId,
-                message.CorrelationId,
-                message.OccurredOnUtc,
-                message.Payload
-            )).ToList()
-        );
-    }
+    /// <returns>The lightweight batch integration event.</returns>
+    private static TransactionBatchMessage MapToBatchIntegrationEvent(
+        IReadOnlyCollection<OutboxMessage> messages) => new(
+                 Guid.NewGuid(),
+                 [.. messages.Select(m => Guid.Parse(m.AggregateId))]);
 
     /// <summary>
     /// Maps an outbox message to a single integration event.

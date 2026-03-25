@@ -2,8 +2,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransactionService.Domain.Entities;
 
+/// <summary>
+/// Configures the database mapping for the <see cref="IdempotencyEntry"/> entity.
+/// </summary>
 public class IdempotencyEntryConfiguration : IEntityTypeConfiguration<IdempotencyEntry>
 {
+    /// <summary>
+    /// Configures the entity properties, keys, and indexes for <see cref="IdempotencyEntry"/>.
+    /// </summary>
+    /// <param name="builder">The builder used to configure the entity.</param>
     public void Configure(EntityTypeBuilder<IdempotencyEntry> builder)
     {
         builder.ToTable("idempotency_entries", "transaction");

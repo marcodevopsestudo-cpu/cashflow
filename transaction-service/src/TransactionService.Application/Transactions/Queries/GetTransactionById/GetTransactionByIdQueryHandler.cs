@@ -37,7 +37,7 @@ public sealed class GetTransactionByIdQueryHandler : IRequestHandler<GetTransact
     public async Task<TransactionDto> Handle(GetTransactionByIdQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Getting transaction by id. TransactionId={TransactionId}",
+            MessageCatalog.Logs.GetTransactionByIdStarted,
             request.TransactionId);
 
         try
@@ -49,7 +49,7 @@ public sealed class GetTransactionByIdQueryHandler : IRequestHandler<GetTransact
                 _logger.TransactionNotFound(request.TransactionId);
 
                 _logger.LogWarning(
-                    "Transaction not found. TransactionId={TransactionId}",
+                    MessageCatalog.Logs.GetTransactionByIdNotFound,
                     request.TransactionId);
 
                 throw new EntityNotFoundApplicationException(
@@ -57,7 +57,7 @@ public sealed class GetTransactionByIdQueryHandler : IRequestHandler<GetTransact
             }
 
             _logger.LogInformation(
-                "Transaction retrieved successfully. TransactionId={TransactionId}, AccountId={AccountId}, Amount={Amount}, Currency={Currency}, Kind={Kind}",
+                MessageCatalog.Logs.GetTransactionByIdSucceeded,
                 transaction.TransactionId,
                 transaction.AccountId,
                 transaction.Amount,
@@ -69,7 +69,7 @@ public sealed class GetTransactionByIdQueryHandler : IRequestHandler<GetTransact
         catch (OperationCanceledException)
         {
             _logger.LogWarning(
-                "GetTransactionById was canceled. TransactionId={TransactionId}",
+                MessageCatalog.Logs.GetTransactionByIdCanceled,
                 request.TransactionId);
 
             throw;
@@ -80,14 +80,14 @@ public sealed class GetTransactionByIdQueryHandler : IRequestHandler<GetTransact
         {
             _logger.LogError(
                 ex,
-                "Unexpected error while retrieving transaction. TransactionId={TransactionId}",
+                MessageCatalog.Logs.GetTransactionByIdUnexpectedError,
                 request.TransactionId);
 
             if (ex.InnerException is Npgsql.NpgsqlException npgsqlEx)
             {
                 _logger.LogError(
                     npgsqlEx,
-                    "Npgsql exception while saving transaction. Message={Message}",
+                    MessageCatalog.Logs.GetTransactionByIdNpgsqlError,
                     npgsqlEx.Message);
             }
 
@@ -95,7 +95,7 @@ public sealed class GetTransactionByIdQueryHandler : IRequestHandler<GetTransact
             {
                 _logger.LogError(
                     pgEx,
-                    "Postgres exception while savingtransaction. SqlState={SqlState}, Detail={Detail}, ConstraintName={ConstraintName}, TableName={TableName}, ColumnName={ColumnName}",
+                    MessageCatalog.Logs.GetTransactionByIdPostgresError,
                     pgEx.SqlState,
                     pgEx.Detail,
                     pgEx.ConstraintName,

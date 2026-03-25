@@ -3,8 +3,8 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using TransactionService.Application.Abstractions.Messaging;
 using TransactionService.Application.Common.Diagnostics;
+using TransactionService.Application.Resources;
 using TransactionService.Application.Transactions.Common;
-using TransactionService.Domain.Entities;
 
 namespace TransactionService.Application.Transactions.Commands.ProcessOutBox;
 
@@ -27,41 +27,23 @@ public sealed class ProcessOutboxCommandHandler(
     public async Task<OutboxProcessorDto> Handle(ProcessOutboxCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Starting outbox processing. CorrelationId={CorrelationId}, BatchSize={BatchSize}",
+            MessageCatalog.Logs.ProcessOutboxStarted,
             request.CorrelationId,
             request.BatchSize);
 
         try
         {
-            _logger.LogDebug(
-                "Invoking outbox processor. CorrelationId={CorrelationId}, BatchSize={BatchSize}",
-                request.CorrelationId,
-                request.BatchSize);
-
             var items = await _outboxProcessor.ProcessPendingMessagesAsync(request.BatchSize, cancellationToken);
 
             _logger.OutboxProcessingFinished(items);
 
-            _logger.LogInformation(
-                "Outbox processing completed successfully. CorrelationId={CorrelationId}, BatchSize={BatchSize}, ProcessedItems={ProcessedItems}",
-                request.CorrelationId,
-                request.BatchSize,
-                items);
-
-            if (items == 0)
-            {
-                _logger.LogInformation(
-                    "Outbox processing finished with no pending messages. CorrelationId={CorrelationId}, BatchSize={BatchSize}",
-                    request.CorrelationId,
-                    request.BatchSize);
-            }
 
             return new OutboxProcessorDto(items);
         }
         catch (OperationCanceledException)
         {
             _logger.LogWarning(
-                "Outbox processing was canceled. CorrelationId={CorrelationId}, BatchSize={BatchSize}",
+                MessageCatalog.Logs.ProcessOutboxCanceled,
                 request.CorrelationId,
                 request.BatchSize);
 
@@ -71,7 +53,7 @@ public sealed class ProcessOutboxCommandHandler(
         {
             _logger.LogError(
                 ex,
-                "Unexpected error while processing outbox messages. CorrelationId={CorrelationId}, BatchSize={BatchSize}",
+                MessageCatalog.Logs.ProcessOutboxUnexpectedError,
                 request.CorrelationId,
                 request.BatchSize);
 
@@ -79,7 +61,7 @@ public sealed class ProcessOutboxCommandHandler(
             {
                 _logger.LogError(
                     npgsqlEx,
-                    "Npgsql exception while processing outbox messages. CorrelationId={CorrelationId}, Message={Message}",
+                    MessageCatalog.Logs.ProcessOutboxNpgsqlError,
                     request.CorrelationId,
                     npgsqlEx.Message);
             }
@@ -88,7 +70,7 @@ public sealed class ProcessOutboxCommandHandler(
             {
                 _logger.LogError(
                     innerNpgsqlEx,
-                    "Inner Npgsql exception while processing outbox messages. CorrelationId={CorrelationId}, Message={Message}",
+                    MessageCatalog.Logs.ProcessOutboxInnerNpgsqlError,
                     request.CorrelationId,
                     innerNpgsqlEx.Message);
             }
@@ -97,7 +79,7 @@ public sealed class ProcessOutboxCommandHandler(
             {
                 _logger.LogError(
                     pgEx,
-                    "Postgres exception while processing outbox messages. CorrelationId={CorrelationId}, SqlState={SqlState}, Detail={Detail}, ConstraintName={ConstraintName}, TableName={TableName}, ColumnName={ColumnName}",
+                    MessageCatalog.Logs.ProcessOutboxPostgresError,
                     request.CorrelationId,
                     pgEx.SqlState,
                     pgEx.Detail,
@@ -110,7 +92,7 @@ public sealed class ProcessOutboxCommandHandler(
             {
                 _logger.LogError(
                     innerPgEx,
-                    "Inner Postgres exception while processing outbox messages. CorrelationId={CorrelationId}, SqlState={SqlState}, Detail={Detail}, ConstraintName={ConstraintName}, TableName={TableName}, ColumnName={ColumnName}",
+                    MessageCatalog.Logs.ProcessOutboxInnerPostgresError,
                     request.CorrelationId,
                     innerPgEx.SqlState,
                     innerPgEx.Detail,

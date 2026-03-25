@@ -75,7 +75,7 @@ public sealed class EntraAuthorizationMiddleware : IFunctionsWorkerMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to parse caller principal.");
+            _logger.LogWarning(ex, ApiMessageCatalog.Logs.FailedToParseCallerPrincipal);
         }
         var decision = _evaluator.Evaluate(principal, _options.Value);
         var correlationId = context.GetCorrelationId();

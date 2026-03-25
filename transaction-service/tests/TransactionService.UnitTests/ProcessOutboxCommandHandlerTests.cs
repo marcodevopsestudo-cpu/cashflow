@@ -49,4 +49,32 @@ public sealed class ProcessOutboxCommandHandlerTests
 
         outboxProcessorMock.VerifyNoOtherCalls();
     }
+
+    /// <summary>
+    /// Verifies that exceptions from the outbox processor are propagated to the caller.
+    /// </summary>
+    [Fact]
+    public async Task Handle_ShouldRethrow_WhenProcessorFails()
+    {
+        // Arrange
+        var outboxProcessorMock = new Mock<IOutboxProcessor>();
+        var expectedException = new InvalidOperationException("service bus unavailable");
+
+        outboxProcessorMock
+            .Setup(x => x.ProcessPendingMessagesAsync(10, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(expectedException);
+
+        var handler = new ProcessOutboxCommandHandler(
+            outboxProcessorMock.Object,
+            NullLogger<ProcessOutboxCommandHandler>.Instance);
+
+        var command = new ProcessOutboxCommand(10, Guid.NewGuid().ToString("N"));
+
+        // Act
+        var act = () => handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("service bus unavailable");
+    }
 }
