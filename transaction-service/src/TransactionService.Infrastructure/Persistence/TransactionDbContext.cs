@@ -30,6 +30,11 @@ public sealed class TransactionDbContext(DbContextOptions<TransactionDbContext> 
     public DbSet<IdempotencyEntry> IdempotencyEntries => Set<IdempotencyEntry>();
 
     /// <summary>
+    /// Gets the daily balances set.
+    /// </summary>
+    public DbSet<DailyBalance> DailyBalances => Set<DailyBalance>();
+
+    /// <summary>
     /// Persists pending changes.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>

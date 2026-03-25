@@ -55,6 +55,7 @@ public static class DependencyInjection
         services.AddDbContext<TransactionDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
+        services.AddScoped<IDailyBalanceRepository, DailyBalanceRepository>();
         services.AddScoped<IIdempotencyRepository, IdempotencyRepository>();
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<TransactionDbContext>());
         services.AddSingleton<IIntegrationEventPublisher, AzureServiceBusEventPublisher>();
