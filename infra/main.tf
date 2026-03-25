@@ -34,18 +34,19 @@ locals {
   }
 
   consolidation_service_app_settings = {
-    FUNCTIONS_WORKER_RUNTIME              = "dotnet-isolated"
-    FUNCTIONS_EXTENSION_VERSION           = "~4"
-    ASPNETCORE_ENVIRONMENT                = var.environment
-    AzureWebJobsStorage__accountName      = module.storage.name
-    ServiceBus__TopicName                 = module.servicebus.topic_name
-    ServiceBus__SubscriptionName          = var.servicebus_subscription_name
-    ServiceBus__FullyQualifiedNamespace   = module.servicebus.namespace_fqdn
-    ServiceBus__UseManagedIdentity        = "true"
-    ServiceBus__ConnectionString          = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.servicebus_connection_string.versionless_id})"
-    ConnectionStrings__Postgres           = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.postgres_connection_string.versionless_id})"
-    APPLICATIONINSIGHTS_CONNECTION_STRING = module.appinsights.connection_string
-  }
+  FUNCTIONS_WORKER_RUNTIME              = "dotnet-isolated"
+  FUNCTIONS_EXTENSION_VERSION           = "~4"
+  ASPNETCORE_ENVIRONMENT                = var.environment
+
+  AzureWebJobsStorage                   = module.storage.connection_string
+
+  ServiceBusTopicName                   = module.servicebus.topic_name
+  ServiceBusSubscriptionName            = var.servicebus_subscription_name
+  ServiceBusConnection                  = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.servicebus_connection_string.versionless_id})"
+
+  ConnectionStrings__Postgres           = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.postgres_connection_string.versionless_id})"
+  APPLICATIONINSIGHTS_CONNECTION_STRING = module.appinsights.connection_string
+}
 }
 
 # ------------------------------------------------------
