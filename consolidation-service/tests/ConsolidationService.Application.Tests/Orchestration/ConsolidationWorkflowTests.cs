@@ -45,11 +45,27 @@ public sealed class ConsolidationWorkflowTests
                 TransactionCount = call.ArgAt<int>(2)
             });
 
-        transactionRepository.GetPendingByIdsAsync(Arg.Any<IReadOnlyCollection<long>>(), Arg.Any<CancellationToken>())
+        var transactionId1 = Guid.NewGuid();
+        var transactionId2 = Guid.NewGuid();
+        var message = CreateMessage([transactionId1, transactionId2]);
+
+        transactionRepository.GetPendingByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(
             [
-                new Transaction { Id = 1, Amount = 100m, Type = TransactionType.Credit, OccurredAtUtc = new DateTime(2026, 3, 22, 10, 0, 0, DateTimeKind.Utc) },
-                new Transaction { Id = 2, Amount = 40m, Type = TransactionType.Debit, OccurredAtUtc = new DateTime(2026, 3, 22, 11, 0, 0, DateTimeKind.Utc) }
+                new Transaction
+                {
+                    Id = transactionId1,
+                    Amount = 100m,
+                    Type = TransactionType.Credit,
+                    OccurredAtUtc = new DateTime(2026, 3, 22, 10, 0, 0, DateTimeKind.Utc)
+                },
+                new Transaction
+                {
+                    Id = transactionId2,
+                    Amount = 40m,
+                    Type = TransactionType.Debit,
+                    OccurredAtUtc = new DateTime(2026, 3, 22, 11, 0, 0, DateTimeKind.Utc)
+                }
             ]);
 
         var sut = CreateSut(
@@ -59,20 +75,21 @@ public sealed class ConsolidationWorkflowTests
             errorRepository,
             retryPolicy);
 
-        var message = CreateMessage([1L, 2L]);
-
         // Act
         await sut.ExecuteAsync(message, CancellationToken.None);
 
         // Assert
-        await batchRepository.Received(1).MarkAsProcessingAsync(message.BatchId, CancellationToken.None);
+        await batchRepository.Received(1)
+            .MarkAsProcessingAsync(message.BatchId, CancellationToken.None);
 
         await dailyBalanceRepository.Received(1)
-            .UpsertAsync(Arg.Is<IReadOnlyCollection<ConsolidationService.Domain.ValueObjects.DailyAggregate>>(x => x.Count == 1), CancellationToken.None);
+            .UpsertAsync(
+                Arg.Is<IReadOnlyCollection<ConsolidationService.Domain.ValueObjects.DailyAggregate>>(x => x.Count == 1),
+                CancellationToken.None);
 
         await transactionRepository.Received(1)
             .MarkAsConsolidatedAsync(
-                Arg.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(message.TransactionIds)),
+                Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.SequenceEqual(message.TransactionIds)),
                 message.BatchId,
                 Arg.Any<DateTime>(),
                 CancellationToken.None);
@@ -81,7 +98,9 @@ public sealed class ConsolidationWorkflowTests
             .MarkAsSucceededAsync(message.BatchId, CancellationToken.None);
 
         await errorRepository.DidNotReceive()
-            .InsertAsync(Arg.Any<IReadOnlyCollection<TransactionProcessingError>>(), Arg.Any<CancellationToken>());
+            .InsertAsync(
+                Arg.Any<IReadOnlyCollection<TransactionProcessingError>>(),
+                Arg.Any<CancellationToken>());
     }
 
     /// <summary>
@@ -103,14 +122,14 @@ public sealed class ConsolidationWorkflowTests
         batchRepository.GetAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException<DailyBatch?>(new Exception("boom")));
 
+        var message = CreateMessage([Guid.NewGuid(), Guid.NewGuid()]);
+
         var sut = CreateSut(
             batchRepository,
             transactionRepository,
             dailyBalanceRepository,
             errorRepository,
             retryPolicy);
-
-        var message = CreateMessage([9L, 10L]);
 
         // Act
         var action = async () => await sut.ExecuteAsync(message, CancellationToken.None);
@@ -123,7 +142,7 @@ public sealed class ConsolidationWorkflowTests
 
         await transactionRepository.Received(1)
             .MarkAsFailedAsync(
-                Arg.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(message.TransactionIds)),
+                Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.SequenceEqual(message.TransactionIds)),
                 message.BatchId,
                 1,
                 TransactionProcessingStatus.PendingManualReview,
@@ -135,6 +154,15 @@ public sealed class ConsolidationWorkflowTests
                 CancellationToken.None);
     }
 
+    /// <summary>
+    /// Creates a fully configured instance of <see cref="ConsolidationWorkflow"/> for testing.
+    /// </summary>
+    /// <param name="batchRepository">Mocked batch repository.</param>
+    /// <param name="transactionRepository">Mocked transaction repository.</param>
+    /// <param name="dailyBalanceRepository">Mocked daily balance repository.</param>
+    /// <param name="errorRepository">Mocked error repository.</param>
+    /// <param name="retryPolicy">Mocked retry policy.</param>
+    /// <returns>A configured <see cref="ConsolidationWorkflow"/> instance.</returns>
     private static ConsolidationWorkflow CreateSut(
         IDailyBatchRepository batchRepository,
         ITransactionRepository transactionRepository,
@@ -145,6 +173,10 @@ public sealed class ConsolidationWorkflowTests
         return new ConsolidationWorkflow(
             new RegisterBatchStep(batchRepository, NullLogger<RegisterBatchStep>.Instance),
             new LoadTransactionsStep(transactionRepository, NullLogger<LoadTransactionsStep>.Instance),
+            new ValidateTransactionsStep(
+                errorRepository,
+                transactionRepository,
+                NullLogger<ValidateTransactionsStep>.Instance),
             new AggregateTransactionsStep(NullLogger<AggregateTransactionsStep>.Instance),
             new UpsertDailyBalanceStep(dailyBalanceRepository, NullLogger<UpsertDailyBalanceStep>.Instance),
             new FinalizeBatchStep(transactionRepository, batchRepository, NullLogger<FinalizeBatchStep>.Instance),
@@ -155,7 +187,12 @@ public sealed class ConsolidationWorkflowTests
             NullLogger<ConsolidationWorkflow>.Instance);
     }
 
-    private static ConsolidationBatchMessage CreateMessage(IReadOnlyCollection<long> transactionIds)
+    /// <summary>
+    /// Creates a valid <see cref="ConsolidationBatchMessage"/> for testing.
+    /// </summary>
+    /// <param name="transactionIds">Transaction identifiers to include in the message.</param>
+    /// <returns>A valid batch message.</returns>
+    private static ConsolidationBatchMessage CreateMessage(IReadOnlyCollection<Guid> transactionIds)
         => new()
         {
             BatchId = Guid.NewGuid(),

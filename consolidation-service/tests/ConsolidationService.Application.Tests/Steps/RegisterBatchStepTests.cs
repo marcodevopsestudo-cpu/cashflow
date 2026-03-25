@@ -44,7 +44,7 @@ public sealed class RegisterBatchStepTests
                 BatchId = Guid.NewGuid(),
                 CorrelationId = "corr-006",
                 PublishedAtUtc = DateTime.UtcNow,
-                TransactionIds = new[] { 7L }
+                TransactionIds = new[] { Guid.NewGuid() }
             }
         };
 

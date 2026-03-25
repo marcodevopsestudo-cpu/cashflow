@@ -1,3 +1,4 @@
+using ConsolidationService.Application.Messages.Validation;
 using FluentValidation;
 
 namespace ConsolidationService.Application.Commands.ProcessConsolidationBatch;
@@ -18,19 +19,25 @@ public sealed class ProcessConsolidationBatchCommandValidator : AbstractValidato
     public ProcessConsolidationBatchCommandValidator()
     {
         RuleFor(x => x.Message.BatchId)
-            .NotEmpty();
+            .NotEmpty()
+            .WithMessage(ValidationMessages.Command.BatchIdRequired);
 
         RuleFor(x => x.Message.CorrelationId)
             .NotEmpty()
-            .MaximumLength(64);
+            .WithMessage(ValidationMessages.Command.CorrelationIdRequired)
+            .MaximumLength(64)
+            .WithMessage(ValidationMessages.Command.CorrelationIdTooLong);
 
         RuleFor(x => x.Message.TransactionIds)
-            .NotEmpty();
+            .NotEmpty()
+            .WithMessage(ValidationMessages.Command.TransactionIdsRequired);
 
         RuleForEach(x => x.Message.TransactionIds)
-            .GreaterThan(0);
+            .NotEmpty()
+            .WithMessage(ValidationMessages.Command.TransactionIdRequired);
 
         RuleFor(x => x.MessageId)
-            .NotEmpty();
+            .NotEmpty()
+            .WithMessage(ValidationMessages.Command.MessageIdRequired);
     }
 }

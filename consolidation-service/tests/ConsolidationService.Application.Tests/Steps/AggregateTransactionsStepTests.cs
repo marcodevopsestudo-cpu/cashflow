@@ -24,6 +24,10 @@ public sealed class AggregateTransactionsStepTests
         var step = new AggregateTransactionsStep(
             NullLogger<AggregateTransactionsStep>.Instance);
 
+        var transactionId1 = Guid.NewGuid();
+        var transactionId2 = Guid.NewGuid();
+        var transactionId3 = Guid.NewGuid();
+
         var context = new BatchExecutionContext
         {
             Message = new ConsolidationBatchMessage
@@ -31,32 +35,32 @@ public sealed class AggregateTransactionsStepTests
                 BatchId = Guid.NewGuid(),
                 CorrelationId = "corr-005",
                 PublishedAtUtc = DateTime.UtcNow,
-                TransactionIds = new[] { 1L, 2L, 3L }
+                TransactionIds = [transactionId1, transactionId2, transactionId3]
             },
-            Transactions = new[]
-            {
+            Transactions =
+            [
                 new Transaction
                 {
-                    Id = 1,
+                    Id = transactionId1,
                     Amount = 100m,
                     Type = TransactionType.Credit,
                     OccurredAtUtc = new DateTime(2026, 3, 22, 10, 0, 0, DateTimeKind.Utc)
                 },
                 new Transaction
                 {
-                    Id = 2,
+                    Id = transactionId2,
                     Amount = 25m,
                     Type = TransactionType.Debit,
                     OccurredAtUtc = new DateTime(2026, 3, 22, 11, 0, 0, DateTimeKind.Utc)
                 },
                 new Transaction
                 {
-                    Id = 3,
+                    Id = transactionId3,
                     Amount = 50m,
                     Type = TransactionType.Credit,
                     OccurredAtUtc = new DateTime(2026, 3, 23, 9, 0, 0, DateTimeKind.Utc)
                 }
-            }
+            ]
         };
 
         // Act

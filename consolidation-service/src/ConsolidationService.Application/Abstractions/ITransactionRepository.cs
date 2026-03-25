@@ -22,7 +22,7 @@ public interface ITransactionRepository
     /// <returns>
     /// A read-only collection of <see cref="Transaction"/> instances that are in a pending state.
     /// </returns>
-    Task<IReadOnlyCollection<Transaction>> GetPendingByIdsAsync(IReadOnlyCollection<long> transactionIds, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<Transaction>> GetPendingByIdsAsync(IReadOnlyCollection<Guid> transactionIds, CancellationToken cancellationToken);
 
     /// <summary>
     /// Marks the specified transactions as successfully consolidated.
@@ -42,7 +42,7 @@ public interface ITransactionRepository
     /// <returns>
     /// A <see cref="Task"/> that represents the asynchronous update operation.
     /// </returns>
-    Task MarkAsConsolidatedAsync(IReadOnlyCollection<long> transactionIds, Guid batchId, DateTime consolidatedAtUtc, CancellationToken cancellationToken);
+    Task MarkAsConsolidatedAsync(IReadOnlyCollection<Guid> transactionIds, Guid batchId, DateTime consolidatedAtUtc, CancellationToken cancellationToken);
 
     /// <summary>
     /// Marks the specified transactions as failed during processing.
@@ -69,5 +69,5 @@ public interface ITransactionRepository
     /// This method is typically used when transaction processing fails and requires retry
     /// or manual intervention, depending on the <paramref name="status"/>.
     /// </remarks>
-    Task MarkAsFailedAsync(IReadOnlyCollection<long> transactionIds, Guid batchId, int attemptCount, TransactionProcessingStatus status, CancellationToken cancellationToken);
+    Task MarkAsFailedAsync(IReadOnlyCollection<Guid> transactionIds, Guid batchId, int attemptCount, TransactionProcessingStatus status, CancellationToken cancellationToken);
 }

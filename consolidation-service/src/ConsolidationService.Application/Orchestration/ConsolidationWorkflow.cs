@@ -18,6 +18,7 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
 {
     private readonly RegisterBatchStep _registerBatchStep;
     private readonly LoadTransactionsStep _loadTransactionsStep;
+    private readonly ValidateTransactionsStep _validateTransactionsStep;
     private readonly AggregateTransactionsStep _aggregateTransactionsStep;
     private readonly UpsertDailyBalanceStep _upsertDailyBalanceStep;
     private readonly FinalizeBatchStep _finalizeBatchStep;
@@ -30,39 +31,21 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
     /// <summary>
     /// Initializes a new instance of the <see cref="ConsolidationWorkflow"/> class.
     /// </summary>
-    /// <param name="registerBatchStep">
-    /// Step responsible for registering or retrieving the batch before processing begins.
-    /// </param>
-    /// <param name="loadTransactionsStep">
-    /// Step responsible for loading pending transactions associated with the batch.
-    /// </param>
-    /// <param name="aggregateTransactionsStep">
-    /// Step responsible for aggregating transactions into daily balances.
-    /// </param>
-    /// <param name="upsertDailyBalanceStep">
-    /// Step responsible for persisting aggregated balances.
-    /// </param>
-    /// <param name="finalizeBatchStep">
-    /// Step responsible for marking the batch as successfully processed.
-    /// </param>
-    /// <param name="dailyBatchRepository">
-    /// Repository used to manage batch lifecycle state transitions.
-    /// </param>
-    /// <param name="transactionRepository">
-    /// Repository used to update transaction processing states.
-    /// </param>
-    /// <param name="errorRepository">
-    /// Repository used to persist transaction processing errors for manual review.
-    /// </param>
-    /// <param name="retryPolicy">
-    /// Policy used to execute the workflow with retry and backoff strategies.
-    /// </param>
-    /// <param name="logger">
-    /// Logger used to record structured information about workflow execution.
-    /// </param>
+    /// <param name="registerBatchStep">Step responsible for registering the batch.</param>
+    /// <param name="loadTransactionsStep">Step responsible for loading transactions.</param>
+    /// <param name="validateTransactionsStep">Step responsible for validating transactions.</param>
+    /// <param name="aggregateTransactionsStep">Step responsible for aggregating transactions.</param>
+    /// <param name="upsertDailyBalanceStep">Step responsible for updating daily balances.</param>
+    /// <param name="finalizeBatchStep">Step responsible for finalizing the batch.</param>
+    /// <param name="dailyBatchRepository">Repository for batch persistence operations.</param>
+    /// <param name="transactionRepository">Repository for transaction persistence operations.</param>
+    /// <param name="errorRepository">Repository for transaction processing errors.</param>
+    /// <param name="retryPolicy">Retry policy used to execute the workflow with resilience.</param>
+    /// <param name="logger">Logger instance.</param>
     public ConsolidationWorkflow(
         RegisterBatchStep registerBatchStep,
         LoadTransactionsStep loadTransactionsStep,
+        ValidateTransactionsStep validateTransactionsStep,
         AggregateTransactionsStep aggregateTransactionsStep,
         UpsertDailyBalanceStep upsertDailyBalanceStep,
         FinalizeBatchStep finalizeBatchStep,
@@ -74,6 +57,7 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
     {
         _registerBatchStep = registerBatchStep;
         _loadTransactionsStep = loadTransactionsStep;
+        _validateTransactionsStep = validateTransactionsStep;
         _aggregateTransactionsStep = aggregateTransactionsStep;
         _upsertDailyBalanceStep = upsertDailyBalanceStep;
         _finalizeBatchStep = finalizeBatchStep;
@@ -85,10 +69,13 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
     }
 
     /// <summary>
-    /// Executes the consolidation workflow for a given batch message.
+    /// Executes the consolidation workflow for the provided batch message.
     /// </summary>
-    /// <param name="message">The batch message to be processed.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <param name="message">The batch message containing transaction identifiers.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="BatchAlreadyProcessedException">Thrown when the batch was already processed.</exception>
+    /// <exception cref="BatchProcessingException">Thrown when an unexpected error occurs during processing.</exception>
     public async Task ExecuteAsync(ConsolidationBatchMessage message, CancellationToken cancellationToken)
     {
         var context = new BatchExecutionContext
@@ -115,26 +102,46 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
             await HandleFailureAsync(context, exception, cancellationToken);
 
             throw new BatchProcessingException(
-                string.Format(ErrorMessages.ProcessingFailed, message.BatchId),
+                string.Format(ErrorMessages.Batch.ProcessingFailed, message.BatchId),
                 exception);
         }
     }
 
     /// <summary>
-    /// Executes all workflow steps in order.
+    /// Executes the internal pipeline steps in sequence.
     /// </summary>
+    /// <param name="context">Execution context containing batch state.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task ExecutePipelineAsync(BatchExecutionContext context, CancellationToken cancellationToken)
     {
         await _registerBatchStep.ExecuteAsync(context, cancellationToken);
         await _loadTransactionsStep.ExecuteAsync(context, cancellationToken);
+        await _validateTransactionsStep.ExecuteAsync(context, cancellationToken);
+
+        if (context.Transactions.Count == 0)
+        {
+            _logger.LogWarning(
+                BatchLogMessages.Workflow.NoValidTransactionsAfterValidation,
+                context.Message.BatchId);
+
+            await _finalizeBatchStep.ExecuteAsync(context, cancellationToken);
+            return;
+        }
+
         await _aggregateTransactionsStep.ExecuteAsync(context, cancellationToken);
         await _upsertDailyBalanceStep.ExecuteAsync(context, cancellationToken);
         await _finalizeBatchStep.ExecuteAsync(context, cancellationToken);
     }
 
     /// <summary>
-    /// Handles workflow failure by persisting error state and moving transactions to manual review.
+    /// Handles failures during workflow execution by updating batch state,
+    /// persisting errors, and marking transactions for manual review.
     /// </summary>
+    /// <param name="context">Execution context.</param>
+    /// <param name="exception">Exception that occurred.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task HandleFailureAsync(
         BatchExecutionContext context,
         Exception exception,
@@ -149,18 +156,13 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
             retryCount,
             cancellationToken);
 
-        var failures = message.TransactionIds.Select(id => new TransactionProcessingError
-        {
-            BatchId = message.BatchId,
-            TransactionId = id,
-            CorrelationId = message.CorrelationId,
-            ErrorCode = exception.GetType().Name,
-            ErrorMessage = exception.Message,
-            StackTrace = exception.ToString(),
-            CreatedAtUtc = DateTime.UtcNow,
-            RetryCount = retryCount,
-            Status = ProcessingErrorStatuses.PendingManualReview
-        }).ToArray();
+        var failures = message.TransactionIds
+            .Select(id => new TransactionProcessingError(
+                id,
+                message.BatchId,
+                exception.Message,
+                DateTime.UtcNow))
+            .ToArray();
 
         await _errorRepository.InsertAsync(failures, cancellationToken);
 

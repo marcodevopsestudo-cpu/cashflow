@@ -15,7 +15,7 @@ public sealed class BatchAlreadyProcessedException : Exception
     /// The identifier of the batch that has already been processed.
     /// </param>
     public BatchAlreadyProcessedException(Guid batchId)
-        : base(string.Format(ErrorMessages.AlreadyProcessed, batchId))
+        : base(string.Format(ErrorMessages.Batch.AlreadyProcessed, batchId))
     {
         BatchId = batchId;
     }

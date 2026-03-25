@@ -14,18 +14,15 @@ public sealed class ProcessConsolidationBatchCommandValidatorTests
     private readonly ProcessConsolidationBatchCommandValidator _validator = new();
 
     /// <summary>
-    /// Ensures validation succeeds when the command contains valid data.
+    /// Ensures validation passes when the command contains valid data.
     /// </summary>
     [Fact]
     public void Should_pass_validation_when_message_is_valid()
     {
-        // Arrange
         var command = CreateValidCommand();
 
-        // Act
         var result = _validator.Validate(command);
 
-        // Assert
         result.IsValid.Should().BeTrue();
     }
 
@@ -35,7 +32,6 @@ public sealed class ProcessConsolidationBatchCommandValidatorTests
     [Fact]
     public void Should_fail_when_transaction_list_is_empty()
     {
-        // Arrange
         var command = CreateValidCommand() with
         {
             Message = new ConsolidationBatchMessage
@@ -43,17 +39,41 @@ public sealed class ProcessConsolidationBatchCommandValidatorTests
                 BatchId = Guid.NewGuid(),
                 CorrelationId = "corr-001",
                 PublishedAtUtc = DateTime.UtcNow,
-                TransactionIds = Array.Empty<long>()
+                TransactionIds = Array.Empty<Guid>()
             }
         };
 
-        // Act
         var action = () => _validator.ValidateAndThrow(command);
 
-        // Assert
         action.Should().Throw<ValidationException>();
     }
 
+    /// <summary>
+    /// Ensures validation fails when any transaction identifier is empty.
+    /// </summary>
+    [Fact]
+    public void Should_fail_when_any_transaction_id_is_empty()
+    {
+        var command = CreateValidCommand() with
+        {
+            Message = new ConsolidationBatchMessage
+            {
+                BatchId = Guid.NewGuid(),
+                CorrelationId = "corr-001",
+                PublishedAtUtc = DateTime.UtcNow,
+                TransactionIds = [Guid.NewGuid(), Guid.Empty]
+            }
+        };
+
+        var action = () => _validator.ValidateAndThrow(command);
+
+        action.Should().Throw<ValidationException>();
+    }
+
+    /// <summary>
+    /// Creates a valid command instance for testing purposes.
+    /// </summary>
+    /// <returns>A valid <see cref="ProcessConsolidationBatchCommand"/>.</returns>
     private static ProcessConsolidationBatchCommand CreateValidCommand()
         => new(
             new ConsolidationBatchMessage
@@ -61,7 +81,7 @@ public sealed class ProcessConsolidationBatchCommandValidatorTests
                 BatchId = Guid.NewGuid(),
                 CorrelationId = "corr-001",
                 PublishedAtUtc = DateTime.UtcNow,
-                TransactionIds = new[] { 1L, 2L, 3L }
+                TransactionIds = [Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()]
             },
             "msg-001");
 }

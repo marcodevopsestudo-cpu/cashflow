@@ -58,7 +58,7 @@ public sealed class LoadTransactionsStep
         if (transactions.Count == 0)
         {
             throw new InvalidBatchException(
-                string.Format(ErrorMessages.NoPendingTransactions, message.BatchId));
+                string.Format(ErrorMessages.Batch.NoPendingTransactions, message.BatchId));
         }
 
         context.Transactions = transactions;

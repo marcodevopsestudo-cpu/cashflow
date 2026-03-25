@@ -37,7 +37,7 @@ public sealed class TransactionRepository : ITransactionRepository
     /// A read-only collection containing the pending transactions found for the specified identifiers.
     /// </returns>
     public async Task<IReadOnlyCollection<Transaction>> GetPendingByIdsAsync(
-        IReadOnlyCollection<long> transactionIds,
+        IReadOnlyCollection<Guid> transactionIds,
         CancellationToken cancellationToken)
     {
         const string sql = """
@@ -90,7 +90,7 @@ public sealed class TransactionRepository : ITransactionRepository
     /// A <see cref="Task"/> that represents the asynchronous update operation.
     /// </returns>
     public async Task MarkAsConsolidatedAsync(
-        IReadOnlyCollection<long> transactionIds,
+        IReadOnlyCollection<Guid> transactionIds,
         Guid batchId,
         DateTime consolidatedAtUtc,
         CancellationToken cancellationToken)
@@ -141,7 +141,7 @@ public sealed class TransactionRepository : ITransactionRepository
     /// A <see cref="Task"/> that represents the asynchronous update operation.
     /// </returns>
     public async Task MarkAsFailedAsync(
-        IReadOnlyCollection<long> transactionIds,
+        IReadOnlyCollection<Guid> transactionIds,
         Guid batchId,
         int attemptCount,
         TransactionProcessingStatus status,

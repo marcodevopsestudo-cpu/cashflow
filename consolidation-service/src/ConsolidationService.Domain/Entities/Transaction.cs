@@ -14,7 +14,7 @@ public sealed class Transaction
     /// <summary>
     /// Gets or sets the unique identifier of the transaction.
     /// </summary>
-    public long Id { get; set; }
+    public Guid Id { get; set; }
 
     /// <summary>
     /// Gets or sets the monetary amount of the transaction.
