@@ -1,97 +1,153 @@
 # Transaction Service
 
-Azure Functions isolated worker application responsible for recording debit and credit transactions.
+## Overview
 
-This service is the **main synchronous entry point** of the solution and is intentionally designed to remain available even if the downstream consolidation flow is delayed or unavailable.
+The Transaction Service is responsible for receiving, storing, and exposing financial transactions.
+
+It is designed to be **highly available, fast, and independent** from downstream processing, ensuring that transaction ingestion is never blocked by consolidation or reporting logic.
 
 ---
 
 ## Responsibilities
 
-- receive debit and credit requests;
-- validate input;
-- enforce request-level idempotency;
-- persist transactions in PostgreSQL;
-- persist outbox messages in the same database transaction;
-- expose transaction query endpoints;
-- publish pending outbox records through a timer-triggered process.
+- Receive financial transactions via HTTP API
+- Persist transactions in PostgreSQL
+- Guarantee reliable event publishing using the **Outbox Pattern**
+- Expose transaction query endpoints
+- Expose consolidated daily balance for read operations
 
 ---
 
-## Implemented Capabilities
+## Endpoints
 
-- `POST /api/transactions`
-- `GET /api/transactions/{transactionId}`
-- PostgreSQL persistence
-- request-level idempotency
-- transactional outbox persistence
-- timer-triggered outbox publication to Azure Service Bus
-- Application Insights integration hooks
-- layered structure with Domain / Application / Infrastructure / API
+- `POST /api/transactions` → Register transaction
+- `GET /api/transactions/{id}` → Retrieve transaction
+- `GET /api/daily-balance/{date}` → Retrieve consolidated daily balance per merchant
+
+The daily balance endpoint reads from a **pre-aggregated table (`daily_balance`)**, ensuring fast and scalable queries.
 
 ---
 
-## Architectural Notes
+## Architecture Role
 
-### Why the outbox lives here
+This service is part of a distributed architecture composed of:
 
-The outbox publisher is intentionally hosted in the same workload as the write service to keep the ingestion slice cohesive and to ensure publication can recover from temporary downstream issues without introducing a hard dependency on the consolidation runtime.
+- **Transaction Service (this service)** → Handles ingestion and query
+- **Consolidation Service (worker)** → Processes transactions asynchronously
+- **DB Migrator** → Manages database schema
 
-### Why this service does not wait for consolidation
-
-The challenge requires the transaction service to remain available even if consolidation fails.
-Because of that, this service acknowledges successful transaction creation after:
-
-- durable persistence of source data;
-- durable persistence of the corresponding outbox record.
-
-Daily balance update happens asynchronously in the Consolidation Service.
+The Consolidation Service is responsible for updating the `daily_balance` table asynchronously.
 
 ---
 
-## Security and Access
+## Design Principles
 
-In deployed environments, this service is configured to use:
+### ✔ Decoupling
 
-- Microsoft Entra ID authentication/authorization;
-- audience, issuer, scope and allowed-client validation;
-- Key Vault references for secrets;
-- Managed Identity for Service Bus access.
+The service does NOT perform any heavy computation during request handling.
 
-For local development, authorization can be disabled when needed.
+Instead:
+
+1. Transaction is persisted
+2. Event is stored in Outbox
+3. Event is published asynchronously
 
 ---
 
-## Local Development
+### ✔ High Availability
+
+Even if the Consolidation Service is unavailable:
+
+- Transactions are still accepted
+- Events are safely stored
+- Processing resumes later
+
+---
+
+### ✔ Performance
+
+- Optimized for fast writes
+- Stateless design
+- Minimal processing during requests
+
+---
+
+### ✔ Eventual Consistency
+
+The daily balance is:
+
+- NOT updated in real-time
+- Updated asynchronously (typically within seconds, up to ~30 seconds)
+
+This trade-off ensures scalability and reliability.
+
+---
+
+## Data Flow
+
+1. Client sends transaction request
+2. Transaction is persisted in database
+3. Outbox message is stored in the same transaction
+4. Background process publishes message to Service Bus
+5. Consolidation Service processes the transaction
+6. `daily_balance` table is updated
+7. Query endpoint retrieves pre-aggregated data
+
+---
+
+## How to Run
 
 ### Prerequisites
 
-- .NET 8 SDK
+- .NET 8
 - PostgreSQL
-- Azure Functions Core Tools
-- optional Azurite for local storage emulation
+- Azure Service Bus (or emulator if configured)
 
-### Recommended Flow
+---
 
-1. Start PostgreSQL locally or point the app to an Azure PostgreSQL instance.
-2. Apply database migrations through `../db-migrator`.
-3. Create `src/TransactionService.Api/local.settings.json`.
-4. Run the Function App.
+### Run
 
-### `local.settings.json` template
+```bash
+dotnet run
+```
+
+---
+
+## Configuration
+
+Example (local):
 
 ```json
 {
-  "IsEncrypted": false,
-  "Values": {
-    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "ConnectionStrings__Postgres": "Host=localhost;Port=5432;Database=transactiondb;Username=postgres;Password=postgres",
-    "ServiceBus__TopicName": "transaction-events",
-    "ServiceBus__FullyQualifiedNamespace": "sb-example.servicebus.windows.net",
-    "ServiceBus__UseManagedIdentity": "false",
-    "ServiceBus__ConnectionString": "Endpoint=sb://sb-example.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=replace-me",
-    "Authorization__Enabled": "false"
+  "ConnectionStrings": {
+    "Postgres": "Host=localhost;Port=5432;Database=cashflow;Username=postgres;Password=postgres"
+  },
+  "ServiceBus": {
+    "ConnectionString": "your-service-bus-connection"
+  },
+  "Authorization": {
+    "Enabled": false
   }
 }
 ```
+
+---
+
+## Testing
+
+Includes:
+
+- Unit tests
+- Application layer tests
+
+---
+
+## Notes
+
+This service prioritizes:
+
+- Fast ingestion
+- High availability
+- Clear separation from processing logic
+
+All heavy processing is delegated to the Consolidation Service to ensure scalability.
