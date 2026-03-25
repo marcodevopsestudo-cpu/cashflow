@@ -7,7 +7,7 @@ resource "azuread_service_principal" "this" {
 }
 
 resource "azuread_application_federated_identity_credential" "main" {
-  application_id ="/applications/${azuread_application.this.object_id}"
+  application_id = "/applications/${azuread_application.this.object_id}"
   display_name   = var.credential_name
   description    = "GitHub Actions OIDC"
   audiences      = ["api://AzureADTokenExchange"]

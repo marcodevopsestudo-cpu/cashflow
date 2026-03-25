@@ -45,6 +45,11 @@ variable "project_name" {
   type = string
 }
 
+variable "public_network_access_enabled" {
+  type = bool
+}
+
+
 variable "auth_settings" {
   type = object({
     enabled                = bool

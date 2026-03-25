@@ -39,7 +39,7 @@ resource "azurerm_linux_function_app" "this" {
       login {}
     }
   }
-
+  public_network_access_enabled = var.public_network_access_enabled
   key_vault_reference_identity_id = var.key_vault_reference_identity_id
   app_settings                    = var.app_settings
   tags                            = var.tags
