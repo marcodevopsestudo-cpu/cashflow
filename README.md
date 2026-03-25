@@ -2,7 +2,7 @@
 
 ## Overview
 
-This solution implements a cash flow management system designed to handle financial transactions and provide **daily consolidated balance reports per merchant**.
+This solution implements a cash flow management system designed to handle financial transactions and provide **daily consolidated balance reports**.
 
 The architecture was designed to meet strict non-functional requirements such as:
 
@@ -22,6 +22,7 @@ The system is composed of three main components:
 Responsible for receiving, storing and exposing financial data.
 
 - Synchronous HTTP API
+- Implemented using **Azure Functions**
 - Persists transactions in PostgreSQL
 - Uses **Outbox Pattern** to guarantee reliable event publishing
 - Exposes read endpoints for both transactions and consolidated balance
@@ -31,7 +32,7 @@ Endpoints:
 
 - `POST /api/transactions` → Register transaction
 - `GET /api/transactions/{id}` → Retrieve transaction
-- `GET /api/daily-balance/{date}` → Retrieve consolidated daily balance per merchant
+- `GET /api/daily-balance/{date}` → Retrieve consolidated daily balance
 
 The daily balance query reads from a **pre-aggregated table (`daily_balance`)**, ensuring fast and scalable reads.
 
@@ -41,11 +42,14 @@ The daily balance query reads from a **pre-aggregated table (`daily_balance`)**,
 
 Responsible for processing transactions asynchronously and updating the daily balance.
 
+- Implemented using **Azure Functions**
+
 - Consumes events from Azure Service Bus
+
 - Processes transactions in batches
+
 - Aggregates values per:
   - Date
-  - Merchant
   - Transaction type (credit/debit)
 
 - Updates `daily_balance` table
@@ -63,7 +67,7 @@ Responsible for processing transactions asynchronously and updating the daily ba
 
 ## Daily Balance (Business Requirement)
 
-The system maintains a **daily consolidated balance per merchant**, calculated as:
+The system maintains a **daily consolidated balance**, calculated as:
 
 - Sum of credits
 - Sum of debits
@@ -80,7 +84,7 @@ GET /api/daily-balance/2026-01-01
 The balance is:
 
 - NOT updated in real-time
-- Updated asynchronously within a short delay window (typically a few seconds, up to ~30 seconds)
+- Updated asynchronously within a configurable delay window (typically a few seconds)
 
 This design ensures system scalability and resilience.
 
@@ -136,7 +140,7 @@ To meet performance and availability requirements:
 
 - Balance updates are **not real-time**
 - Consolidation is processed asynchronously
-- Delay is acceptable (few seconds up to ~30 seconds)
+- Delay is configurable and typically within seconds
 
 This trade-off is intentional and aligned with system scalability goals.
 
@@ -147,7 +151,6 @@ This trade-off is intentional and aligned with system scalability goals.
 ### Prerequisites
 
 - .NET 8
-- Docker
 - PostgreSQL
 - Azure Service Bus (or emulator if configured)
 
@@ -155,7 +158,7 @@ This trade-off is intentional and aligned with system scalability goals.
 
 ### Steps
 
-1. Start PostgreSQL (via Docker or local instance)
+1. Start PostgreSQL (local instance)
 
 2. Run DB Migrator:
 
