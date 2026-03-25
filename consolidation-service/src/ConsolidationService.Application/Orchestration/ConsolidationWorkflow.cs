@@ -11,7 +11,9 @@ using Microsoft.Extensions.Logging;
 namespace ConsolidationService.Application.Orchestration;
 
 /// <summary>
-/// Orchestrates the execution of the consolidation pipeline in a deterministic and ordered sequence.
+/// Orchestrates the full consolidation workflow pipeline for a given batch message.
+/// This workflow is responsible for executing all processing steps in order,
+/// handling retries, logging execution progress, and managing failure scenarios.
 /// </summary>
 public sealed class ConsolidationWorkflow : IConsolidationWorkflow
 {
@@ -38,9 +40,9 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
     /// <param name="finalizeBatchStep">Step responsible for finalizing the batch.</param>
     /// <param name="dailyBatchRepository">Repository for batch persistence operations.</param>
     /// <param name="transactionRepository">Repository for transaction persistence operations.</param>
-    /// <param name="errorRepository">Repository for transaction processing errors.</param>
-    /// <param name="retryPolicy">Retry policy used to execute the workflow with resilience.</param>
-    /// <param name="logger">Logger instance.</param>
+    /// <param name="errorRepository">Repository for storing transaction processing errors.</param>
+    /// <param name="retryPolicy">Retry policy used to handle transient failures.</param>
+    /// <param name="logger">Logger instance for observability.</param>
     public ConsolidationWorkflow(
         RegisterBatchStep registerBatchStep,
         LoadTransactionsStep loadTransactionsStep,
@@ -68,13 +70,13 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
     }
 
     /// <summary>
-    /// Executes the consolidation workflow for the provided batch message.
+    /// Executes the consolidation workflow for a given batch message.
+    /// This method controls the full execution lifecycle including retry handling,
+    /// logging, and failure management.
     /// </summary>
     /// <param name="message">The batch message containing transaction identifiers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    /// <exception cref="BatchAlreadyProcessedException">Thrown when the batch was already processed.</exception>
-    /// <exception cref="BatchProcessingException">Thrown when an unexpected error occurs during processing.</exception>
     public async Task ExecuteAsync(ConsolidationBatchMessage message, CancellationToken cancellationToken)
     {
         var context = new BatchExecutionContext
@@ -82,11 +84,21 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
             Message = message
         };
 
+        _logger.LogInformation(
+            "Starting consolidation workflow. BatchId={BatchId}, CorrelationId={CorrelationId}, TransactionCount={TransactionCount}",
+            message.BatchId,
+            message.CorrelationId,
+            message.TransactionIds?.Count ?? 0);
+
         try
         {
             await _retryPolicy.ExecuteAsync(
                 token => ExecutePipelineAsync(context, token),
                 cancellationToken);
+
+            _logger.LogInformation(
+                "Consolidation workflow completed successfully. BatchId={BatchId}",
+                message.BatchId);
         }
         catch (BatchAlreadyProcessedException)
         {
@@ -98,6 +110,12 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
         }
         catch (Exception exception)
         {
+            _logger.LogError(
+                exception,
+                "Unhandled exception during consolidation workflow. BatchId={BatchId}, CorrelationId={CorrelationId}",
+                message.BatchId,
+                message.CorrelationId);
+
             await HandleFailureAsync(context, exception, cancellationToken);
 
             throw new BatchProcessingException(
@@ -106,42 +124,53 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
         }
     }
 
-    /// <summary>
-    /// Executes the internal pipeline steps in sequence.
-    /// </summary>
-    /// <param name="context">Execution context containing batch state.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task ExecutePipelineAsync(BatchExecutionContext context, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Pipeline started. BatchId={BatchId}", context.Message.BatchId);
+
+        _logger.LogInformation("Step: RegisterBatch");
         await _registerBatchStep.ExecuteAsync(context, cancellationToken);
+
+        _logger.LogInformation("Step: LoadTransactions");
         await _loadTransactionsStep.ExecuteAsync(context, cancellationToken);
+
+        _logger.LogInformation(
+            "Transactions loaded. BatchId={BatchId}, Count={Count}",
+            context.Message.BatchId,
+            context.Transactions?.Count ?? 0);
+
+        _logger.LogInformation("Step: ValidateTransactions");
         await _validateTransactionsStep.ExecuteAsync(context, cancellationToken);
 
-        if (context.Transactions.Count == 0)
+        _logger.LogInformation(
+            "Transactions after validation. BatchId={BatchId}, Count={Count}",
+            context.Message.BatchId,
+            context.Transactions?.Count ?? 0);
+
+        if (context.Transactions?.Count == 0)
         {
             _logger.LogWarning(
                 BatchLogMessages.Workflow.NoValidTransactionsAfterValidation,
                 context.Message.BatchId);
 
+            _logger.LogInformation("Finalizing batch with no valid transactions. BatchId={BatchId}", context.Message.BatchId);
+
             await _finalizeBatchStep.ExecuteAsync(context, cancellationToken);
             return;
         }
 
+        _logger.LogInformation("Step: AggregateTransactions");
         await _aggregateTransactionsStep.ExecuteAsync(context, cancellationToken);
+
+        _logger.LogInformation("Step: UpsertDailyBalance");
         await _upsertDailyBalanceStep.ExecuteAsync(context, cancellationToken);
+
+        _logger.LogInformation("Step: FinalizeBatch");
         await _finalizeBatchStep.ExecuteAsync(context, cancellationToken);
+
+        _logger.LogInformation("Pipeline finished. BatchId={BatchId}", context.Message.BatchId);
     }
 
-    /// <summary>
-    /// Handles failures during workflow execution by updating batch state,
-    /// persisting errors for the remaining transactions in the pipeline,
-    /// and marking only those transactions for manual review.
-    /// </summary>
-    /// <param name="context">Execution context.</param>
-    /// <param name="exception">Exception that occurred.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task HandleFailureAsync(
         BatchExecutionContext context,
         Exception exception,
@@ -149,6 +178,12 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
     {
         var retryCount = (context.Batch?.RetryCount ?? 0) + 1;
         var message = context.Message;
+
+        _logger.LogError(
+            exception,
+            "Handling failure. BatchId={BatchId}, RetryCount={RetryCount}",
+            message.BatchId,
+            retryCount);
 
         await _dailyBatchRepository.MarkAsFailedAsync(
             message.BatchId,
@@ -160,6 +195,11 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
             .Select(transaction => transaction.Id)
             .Distinct()
             .ToArray();
+
+        _logger.LogInformation(
+            "Remaining transactions to handle after failure. BatchId={BatchId}, Count={Count}",
+            message.BatchId,
+            remainingTransactionIds.Length);
 
         if (remainingTransactionIds.Length == 0)
         {

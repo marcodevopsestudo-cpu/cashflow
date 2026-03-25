@@ -72,9 +72,9 @@ public sealed class ConsolidationBatchFunction
 
         using (_logger.BeginScope(new Dictionary<string, object>
         {
-            ["CorrelationId"] = message.CorrelationId,
             ["BatchId"] = message.BatchId,
-            ["MessageId"] = messageId
+            ["TransactionIds"] =  message.TransactionIds,
+            ["CorrelationId"] = message.CorrelationId
         }))
         {
             _logger.LogInformation(
