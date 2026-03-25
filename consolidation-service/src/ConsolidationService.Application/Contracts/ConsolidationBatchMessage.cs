@@ -29,5 +29,5 @@ public sealed class ConsolidationBatchMessage
     /// <remarks>
     /// Each identifier represents a transaction that must be processed as part of the batch.
     /// </remarks>
-    public IReadOnlyCollection<Guid> TransactionIds { get; init; } = Array.Empty<Guid>();
+    public IReadOnlyCollection<Guid> TransactionIds { get; init; } = [];
 }

@@ -14,6 +14,18 @@ output "function_default_hostname" {
   value = module.function.default_hostname
 }
 
+output "consolidation_function_app_name" {
+  value = module.consolidation_function.name
+}
+
+output "consolidation_function_app_principal_id" {
+  value = module.consolidation_function.principal_id
+}
+
+output "consolidation_function_default_hostname" {
+  value = module.consolidation_function.default_hostname
+}
+
 output "key_vault_name" {
   value = module.key_vault.name
 }
@@ -28,6 +40,10 @@ output "service_bus_namespace" {
 
 output "service_bus_topic_name" {
   value = module.service_bus.topic_name
+}
+
+output "service_bus_subscription_names" {
+  value = module.service_bus.subscription_names
 }
 
 output "entra_api_client_id" {
@@ -68,5 +84,5 @@ output "postman_client_id" {
 
 output "postman_client_secret" {
   value     = module.entra_postman_client_app.client_secret
-   sensitive = true
+  sensitive = true
 }

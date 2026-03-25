@@ -14,8 +14,8 @@ variable "topic_name" {
   type = string
 }
 
-variable "subscription_name" {
-  type = string
+variable "subscription_names" {
+  type = list(string)
 }
 
 variable "max_delivery_count" {

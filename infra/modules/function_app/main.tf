@@ -15,7 +15,7 @@ resource "azurerm_linux_function_app" "this" {
 
   site_config {
     application_stack {
-      dotnet_version = "8.0"
+      dotnet_version              = "8.0"
       use_dotnet_isolated_runtime = true
     }
 
@@ -23,17 +23,21 @@ resource "azurerm_linux_function_app" "this" {
     minimum_tls_version                    = "1.2"
   }
 
-  auth_settings_v2 {
-    auth_enabled           = var.auth_settings.enabled
-    unauthenticated_action = var.auth_settings.unauthenticated_action
-    default_provider       = "azureactivedirectory"
+  dynamic "auth_settings_v2" {
+    for_each = var.auth_settings != null && var.auth_settings.enabled ? [var.auth_settings] : []
 
-    active_directory_v2 {
-      client_id            = var.auth_settings.client_id
-      tenant_auth_endpoint = var.auth_settings.tenant_auth_endpoint
+    content {
+      auth_enabled           = auth_settings_v2.value.enabled
+      unauthenticated_action = auth_settings_v2.value.unauthenticated_action
+      default_provider       = "azureactivedirectory"
+
+      active_directory_v2 {
+        client_id            = auth_settings_v2.value.client_id
+        tenant_auth_endpoint = auth_settings_v2.value.tenant_auth_endpoint
+      }
+
+      login {}
     }
-
-    login {}
   }
 
   key_vault_reference_identity_id = var.key_vault_reference_identity_id

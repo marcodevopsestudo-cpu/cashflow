@@ -12,7 +12,8 @@ resource "azurerm_servicebus_topic" "this" {
 }
 
 resource "azurerm_servicebus_subscription" "this" {
-  name               = var.subscription_name
+  for_each           = toset(var.subscription_names)
+  name               = each.value
   topic_id           = azurerm_servicebus_topic.this.id
   max_delivery_count = var.max_delivery_count
 }
