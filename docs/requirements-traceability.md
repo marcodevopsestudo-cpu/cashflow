@@ -1,267 +1,144 @@
----
-
-## 3) File: `requirements-traceability.md`
-### Directory
-`/docs/requirements-traceability.md`
-
-```md
 # Requirements Traceability
 
-This document maps the challenge requirements to the implemented solution and to the supporting repository documentation.
-
-Its purpose is to make clear:
-
-- what is implemented;
-- where the evidence is in the repository;
-- which parts are intentionally presented as MVP or future evolution.
+This document maps business and non-functional requirements to the implemented solution.
 
 ---
 
-## 1. Business Requirements
+## Functional Requirements
 
-### Requirement
+### FR-01: Transaction Ingestion
 
-Service to control financial transactions.
+**Requirement:**
+The system must allow merchants to register financial transactions (credit/debit).
 
-**Status**
-Implemented.
+**Implementation:**
 
-**Evidence**
+- Transaction Service endpoint:
+  - `POST /api/transactions`
 
-- Transaction Service receives debit and credit requests.
-- Transactions are persisted in PostgreSQL.
-- Transaction retrieval endpoint is available.
-- Idempotency is enforced on the write path.
-
-**Repository evidence**
-
-- `transaction-service/`
-- `transaction-service/README.md`
-- root `README.md`
+- Data persisted in PostgreSQL
+- Idempotency support (if applicable)
+- Outbox pattern ensures reliable event publishing
 
 ---
 
-### Requirement
+### FR-02: Daily Balance Reporting
 
-Service for daily consolidated balance.
+**Requirement:**
+The system must provide a daily consolidated balance per merchant.
 
-**Status**
-Implemented as a functional MVP with full architectural separation.
+**Implementation:**
 
-**Evidence**
+- Asynchronous consolidation via Consolidation Service
+- Aggregation stored in `daily_balance` table
+- Exposed through Transaction Service endpoint:
 
-- Consolidation Service exists as an independent workload.
-- Batch-oriented processing flow is implemented.
-- Aggregation updates the `daily_balance` read model.
-- Bounded retry behavior is implemented.
-- Manual review registration exists for exhausted failures.
+```
+GET /api/daily-balance/{date}
+```
 
-**Repository evidence**
+**Notes:**
 
-- `consolidation-service/`
-- root `README.md`
-- `docs/architecture-overview.md`
+- Balance includes:
+  - Total credits
+  - Total debits
+  - Final balance per day
 
-**Note**
-The current implementation already demonstrates the main architectural decision required by the challenge: consolidation is independent from transaction ingestion. Additional operational refinement can still evolve.
-
----
-
-## 2. Mandatory Technical Requirements
-
-### Requirement
-
-Solution design.
-
-**Status**
-Implemented.
-
-**Evidence**
-
-- architecture documented in `docs/architecture-overview.md`;
-- responsibilities and data flows explicitly described;
-- service decomposition and trade-offs documented.
+- Data is pre-aggregated for fast queries
 
 ---
 
-### Requirement
+## Non-Functional Requirements
 
-Use C#.
+### NFR-01: High Availability
 
-**Status**
-Implemented.
+**Requirement:**
+The transaction ingestion service must remain available even if consolidation fails.
 
-**Evidence**
+**Solution:**
 
-- services and supporting components are implemented in .NET / C#.
-
----
-
-### Requirement
-
-Tests.
-
-**Status**
-Partially implemented, focused on core logic.
-
-**Evidence**
-
-- unit and application-level tests exist for the services;
-- local deterministic execution flow is documented.
-
-**Note**
-Broader integration and load testing are valid next steps, but the repository already contains enough testing evidence to satisfy the challenge expectation at a minimum viable level.
+- Decoupled architecture
+- Transaction Service does not depend on Consolidation Service
+- Outbox pattern ensures durability
 
 ---
 
-### Requirement
+### NFR-02: Throughput (≥ 50 req/s)
 
-Good practices, patterns, SOLID, architecture.
+**Requirement:**
+The system must handle peak loads of at least 50 requests per second.
 
-**Status**
-Implemented.
+**Solution:**
 
-**Evidence**
+- Stateless Transaction Service
+- Fast database writes
+- No synchronous processing during request
+- Asynchronous processing via Service Bus
 
-- layered separation between Domain, Application, Infrastructure, and API/Worker;
-- transactional outbox pattern;
-- request-level idempotency;
-- bounded retry strategy;
-- infrastructure as code with Terraform;
-- deterministic database migrations via DB Migrator.
+**Design Strategy:**
 
----
+Instead of processing balances synchronously:
 
-### Requirement
-
-README with clear instructions on how the application works and how to run locally.
-
-**Status**
-Implemented.
-
-**Evidence**
-
-- root `README.md` explains the solution and repository structure;
-- `transaction-service/README.md` contains service-specific execution guidance;
-- `docs/OPERATIONS.md` describes the recommended execution sequence.
+1. Transactions are persisted quickly
+2. Events are stored in Outbox
+3. Worker processes them asynchronously
 
 ---
 
-### Requirement
+### NFR-03: Data Loss Control (≤ 5%)
 
-Public repository with project documentation.
+**Requirement:**
+Maximum acceptable data loss is 5%.
 
-**Status**
-Implemented.
+**Solution:**
 
-**Evidence**
-
-- documentation is organized under `docs/`;
-- architecture, operations, non-functional reasoning, and requirement coverage are documented in the repository.
-
----
-
-## 3. Non-Functional Requirements
-
-### Requirement
-
-The transaction service must not become unavailable if the daily consolidation system fails.
-
-**Status**
-Implemented.
-
-**How it is addressed**
-
-- transaction ingestion is separated from consolidation;
-- outbox records are persisted with the source transaction;
-- Azure Service Bus decouples producer and consumer;
-- consolidation is asynchronous and independent from the write path.
-
-**Repository evidence**
-
-- root `README.md`
-- `docs/architecture-overview.md`
-- `docs/non-functional-requirements.md`
+- Transactional Outbox Pattern
+- Reliable messaging (Service Bus)
+- Retry mechanisms in worker
+- Dead-letter queue for failed messages
 
 ---
 
-### Requirement
+### NFR-04: Eventual Consistency
 
-In peak days, the consolidation service receives 50 requests per second with at most 5% request loss.
+**Requirement:**
+The system may tolerate slight delays in balance updates.
 
-**Status**
-Architecturally addressed.
+**Solution:**
 
-**How it is addressed**
+- Consolidation is asynchronous
+- Balance is not real-time
+- Updates occur within seconds (up to ~30 seconds)
 
-- the ingestion path is lightweight and synchronous only up to durable persistence;
-- buffering happens across PostgreSQL, outbox, and Azure Service Bus;
-- failures are tracked explicitly;
-- derived data incompleteness is measurable and recoverable.
+**Justification:**
 
-**Repository evidence**
+This trade-off enables:
 
-- `docs/non-functional-requirements.md`
-- `docs/architecture-overview.md`
-
-**Note**
-The repository documents the architectural mechanisms that address this requirement. Full empirical certification would require dedicated load testing and operational validation.
+- Higher throughput
+- Better availability
+- Reduced system coupling
 
 ---
 
-## 4. Security and Access Controls
+## Summary
 
-### Requirement
-
-Security is part of the architectural evaluation.
-
-**Status**
-Implemented at infrastructure and service-configuration level.
-
-**Evidence**
-
-- Microsoft Entra ID configuration for the Transaction Service;
-- issuer, audience, scope and allowed application validation;
-- Managed Identity configuration for Service Bus access;
-- Key Vault references for secrets;
-- RBAC assignments for infrastructure access;
-- GitHub Actions deployment through OIDC.
-
-**Repository evidence**
-
-- `infra/`
-- root `README.md`
-- `docs/architecture-overview.md`
+| Requirement             | Status                 | Implementation         |
+| ----------------------- | ---------------------- | ---------------------- |
+| Transaction ingestion   | ✅ Implemented         | Transaction Service    |
+| Daily balance reporting | ✅ Implemented         | Worker + Query API     |
+| High availability       | ✅ Implemented         | Decoupled architecture |
+| Throughput ≥ 50 req/s   | ✅ Addressed by design | Async processing       |
+| Data loss ≤ 5%          | ✅ Addressed           | Outbox + retries       |
+| Eventual consistency    | ✅ Implemented         | Async consolidation    |
 
 ---
 
-## 5. What Is MVP vs What Is Future Evolution
+## Final Considerations
 
-### Implemented as part of the delivered solution
+The solution intentionally prioritizes:
 
-- Transaction Service
-- Consolidation Service as independent workload
-- DB Migrator
-- Terraform-managed infrastructure
-- core resilience patterns
-- core security controls
-- CI/CD automation
+- Availability over strict consistency
+- Scalability over synchronous processing
+- Reliability through decoupling and messaging
 
-### Natural future evolution
-
-- richer integration and load testing;
-- deeper dashboards and operational alerts;
-- improved manual reconciliation/backoffice flow for exhausted failures;
-- stronger BC/DR operational maturity.
-
----
-
-## 6. Final Assessment
-
-The repository satisfies the challenge mainly through its architectural decisions:
-
-- the write path is protected;
-- the consolidation flow is decoupled;
-- source data is durable;
-- downstream failures are recoverable;
-- the solution is documented in a way that exposes architectural reasoning, not only code structure.
+All requirements are addressed either through implementation or architectural design decisions.

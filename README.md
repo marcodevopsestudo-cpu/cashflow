@@ -1,56 +1,261 @@
-# Cashflow Challenge Solution
+# Cashflow Solution
 
-## Executive Summary
+## Overview
 
-This repository contains a cashflow challenge solution designed around **two business services** and **one operational support component**:
+This solution implements a cash flow management system designed to handle financial transactions and provide **daily consolidated balance reports per merchant**.
 
-1. **Transaction Service**
-   Receives debit and credit transactions, validates requests, persists data in PostgreSQL, and records integration events using the outbox pattern.
+The architecture was designed to meet strict non-functional requirements such as:
 
-2. **Consolidation Service**
-   Processes published transaction batches asynchronously and updates the **daily consolidated balance** read model.
-
-3. **DB Migrator**
-   Applies ordered SQL migrations to PostgreSQL in a deterministic and auditable way.
-
-The solution was designed so that the **transaction write path remains available even if consolidation is delayed or temporarily unavailable**, directly addressing the main non-functional requirement of the challenge.
+- High availability of the transaction ingestion service
+- Support for peak loads (≥ 50 requests per second)
+- Controlled eventual consistency for balance consolidation
+- Fault tolerance with minimal data loss (≤ 5%)
 
 ---
 
-## Challenge Scope Coverage
+## Architecture
 
-The challenge asks for:
+The system is composed of three main components:
 
-- a service to control transactions;
-- a service to generate the daily consolidated balance;
-- design decisions and architectural documentation;
-- code, tests, and clear execution guidance in a public repository.
+### 1. Transaction Service
 
-This repository addresses that scope with:
+Responsible for receiving, storing and exposing financial data.
 
-- **Transaction Service** for the synchronous write path;
-- **Consolidation Service** for the asynchronous daily balance processing path;
-- **DB Migrator** for controlled schema evolution;
-- supporting documentation under `docs/`.
+- Synchronous HTTP API
+- Persists transactions in PostgreSQL
+- Uses **Outbox Pattern** to guarantee reliable event publishing
+- Exposes read endpoints for both transactions and consolidated balance
+- Does NOT depend on consolidation to respond
 
-For a requirement-by-requirement view, see [docs/requirements-traceability.md](./docs/requirements-traceability.md).
+Endpoints:
+
+- `POST /api/transactions` → Register transaction
+- `GET /api/transactions/{id}` → Retrieve transaction
+- `GET /api/daily-balance/{date}` → Retrieve consolidated daily balance per merchant
+
+The daily balance query reads from a **pre-aggregated table (`daily_balance`)**, ensuring fast and scalable reads.
+
+---
+
+### 2. Consolidation Service (Worker)
+
+Responsible for processing transactions asynchronously and updating the daily balance.
+
+- Consumes events from Azure Service Bus
+- Processes transactions in batches
+- Aggregates values per:
+  - Date
+  - Merchant
+  - Transaction type (credit/debit)
+
+- Updates `daily_balance` table
+
+⚠️ This service is **eventually consistent** and runs asynchronously.
 
 ---
 
-## Solution Overview
+### 3. DB Migrator
 
-The architecture follows a **serverless, event-driven, decoupled** design on Azure.
-
-- **Transaction Service** receives requests over HTTP on Azure Functions (.NET isolated).
-- Transactions are persisted in **PostgreSQL**.
-- An **outbox table** guarantees that integration events are stored in the same transaction as the write model.
-- A timer-triggered publisher reads the outbox and sends messages to **Azure Service Bus**.
-- **Consolidation Service** consumes transaction batches asynchronously and updates the `daily_balance` read model.
-- **Application Insights** centralizes logs and telemetry.
-- **Terraform** provisions the main cloud infrastructure.
-- **GitHub Actions with OIDC** automates build and deployment without long-lived deployment secrets.
+- Applies database schema migrations
+- Ensures environment consistency
 
 ---
+
+## Daily Balance (Business Requirement)
+
+The system maintains a **daily consolidated balance per merchant**, calculated as:
+
+- Sum of credits
+- Sum of debits
+- Final balance per day
+
+The balance is exposed via the Transaction Service:
+
+- `GET /api/daily-balance/{date}`
+
+Example:
+
+GET /api/daily-balance/2026-01-01
+
+The balance is:
+
+- NOT updated in real-time
+- Updated asynchronously within a short delay window (typically a few seconds, up to ~30 seconds)
+
+This design ensures system scalability and resilience.
+
+---
+
+## Non-Functional Requirements Strategy
+
+### ✔ High Availability
+
+The Transaction Service is fully independent from the Consolidation Service.
+
+Even if consolidation is unavailable:
+
+- Transactions continue to be accepted
+- Events are safely stored (Outbox)
+- Processing resumes later
+
+---
+
+### ✔ Throughput (≥ 50 req/s)
+
+Handled by:
+
+- Stateless Transaction Service
+- Fast writes to PostgreSQL
+- Asynchronous processing via Service Bus
+- No synchronous coupling between services
+
+Instead of performing heavy calculations during the request, the system:
+
+1. Persists the transaction quickly
+2. Publishes an event using the Outbox pattern
+3. Processes consolidation asynchronously
+
+This ensures the system can sustain high throughput without degrading response times.
+
+---
+
+### ✔ Data Loss Control (≤ 5%)
+
+Achieved through:
+
+- Transactional Outbox Pattern
+- Guaranteed delivery via Service Bus
+- Retry policies in worker
+- Dead-letter handling for failures
+
+---
+
+### ✔ Eventual Consistency
+
+To meet performance and availability requirements:
+
+- Balance updates are **not real-time**
+- Consolidation is processed asynchronously
+- Delay is acceptable (few seconds up to ~30 seconds)
+
+This trade-off is intentional and aligned with system scalability goals.
+
+---
+
+## How to Run Locally
+
+### Prerequisites
+
+- .NET 8
+- Docker
+- PostgreSQL
+- Azure Service Bus (or emulator if configured)
+
+---
+
+### Steps
+
+1. Start PostgreSQL (via Docker or local instance)
+
+2. Run DB Migrator:
+
+```bash
+dotnet run --project db-migrator
+```
+
+3. Run Transaction Service:
+
+```bash
+dotnet run --project transaction-service
+```
+
+4. Run Consolidation Worker:
+
+```bash
+dotnet run --project consolidation-service
+```
+
+---
+
+## Testing
+
+The solution includes:
+
+- Unit Tests
+- Application Layer Tests
+
+Future improvements:
+
+- Integration tests
+- Load tests (to validate throughput empirically)
+
+---
+
+## CI/CD
+
+GitHub Actions pipelines are configured to:
+
+- Build
+- Run tests
+- Deploy infrastructure (Terraform)
+- Deploy services
+
+---
+
+## Architectural Decisions
+
+Key design patterns used:
+
+- Outbox Pattern
+- Event-driven architecture
+- Worker-based background processing
+- Eventual consistency
+- Idempotent processing
+
+---
+
+## Trade-offs
+
+| Decision                  | Reason                                      |
+| ------------------------- | ------------------------------------------- |
+| Eventual consistency      | Enables high throughput and availability    |
+| Asynchronous processing   | Prevents blocking transaction ingestion     |
+| Pre-aggregated read model | Enables fast and scalable queries           |
+| Batch processing          | Improves performance and reduces contention |
+
+---
+
+## What is Implemented vs Future Improvements
+
+### Implemented
+
+- Transaction ingestion API
+- Daily balance query API (`/api/daily-balance/{date}`)
+- Reliable event publishing (Outbox)
+- Asynchronous consolidation
+- Daily balance aggregation logic
+- Error handling and retry mechanisms
+- CI/CD pipelines
+- Infrastructure as Code
+
+### Future Improvements
+
+- Load testing automation
+- Observability improvements (metrics, dashboards)
+- Advanced retry/backoff strategies
+- Multi-region resilience (if required)
+
+---
+
+## Final Notes
+
+This solution prioritizes:
+
+- Reliability over immediacy
+- Scalability over synchronous consistency
+- Clear separation of responsibilities
+
+The architecture ensures that transaction ingestion remains stable under load, while consolidation is handled asynchronously with controlled eventual consistency.
 
 ## Architecture at a Glance
 
