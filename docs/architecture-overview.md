@@ -1,10 +1,9 @@
----
-
 ## 2) File: `architecture-overview.md`
+
 ### Directory
+
 `/docs/architecture-overview.md`
 
-```md
 # Architecture Overview
 
 ## 1. Architectural Context
