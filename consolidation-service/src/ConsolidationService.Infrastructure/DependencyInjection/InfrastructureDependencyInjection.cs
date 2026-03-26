@@ -51,6 +51,7 @@ public static class InfrastructureDependencyInjection
         services.AddScoped<IDailyBalanceRepository, DailyBalanceRepository>();
         services.AddScoped<IDailyBatchRepository, DailyBatchRepository>();
         services.AddScoped<ITransactionProcessingErrorRepository, TransactionProcessingErrorRepository>();
+        services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<TransactionDbContext>());
         services.AddScoped<IRetryPolicy, ExponentialBackoffRetryPolicy>();
 
         return services;

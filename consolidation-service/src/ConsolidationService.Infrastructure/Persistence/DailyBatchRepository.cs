@@ -99,6 +99,8 @@ public sealed class DailyBatchRepository : IDailyBatchRepository
     /// </summary>
     public async Task MarkAsFailedAsync(Guid batchId, string errorMessage, int retryCount, CancellationToken cancellationToken)
     {
+        Console.WriteLine("DAILYBATCHREPOSITORY_EF_VERSION_20260326");
+
         var entity = await _dbContext.Set<DailyBatch>()
             .FirstOrDefaultAsync(x => x.BatchId == batchId, cancellationToken);
 
