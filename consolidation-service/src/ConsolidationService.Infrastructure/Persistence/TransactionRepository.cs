@@ -28,7 +28,7 @@ public sealed class TransactionRepository : ITransactionRepository
             .AsNoTracking()
             .Where(x =>
                     transactionIds.Contains(x.TransactionId) &&
-                    (x.ConsolidationStatus == null ||x.ConsolidationStatus == ConsolidationStatus.NotStarted))
+                    (x.ConsolidationStatus == null || x.ConsolidationStatus == ConsolidationStatus.NotStarted));
 
         var result = await query.ToListAsync(cancellationToken);
 
