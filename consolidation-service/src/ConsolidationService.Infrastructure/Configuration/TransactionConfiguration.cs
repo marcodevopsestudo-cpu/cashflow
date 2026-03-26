@@ -68,7 +68,7 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
 
         builder.Property(x => x.ConsolidationStatus)
             .HasColumnName("consolidation_status")
-            .HasConversion<string>()
+            .HasConversion<int>()
             .IsRequired();
 
         builder.Property(x => x.ConsolidatedAtUtc)
