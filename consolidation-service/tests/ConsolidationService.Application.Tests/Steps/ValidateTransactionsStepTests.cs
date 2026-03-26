@@ -93,7 +93,7 @@ public sealed class ValidateTransactionsStepTests
             Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.SequenceEqual(expectedIds)),
             batchId,
             0,
-            TransactionStatus.PendingManualReview,
+            ConsolidationStatus.PendingManualReview,
             CancellationToken.None);
     }
 }

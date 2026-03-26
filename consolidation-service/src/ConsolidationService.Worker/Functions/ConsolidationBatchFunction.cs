@@ -85,6 +85,7 @@ public sealed class ConsolidationBatchFunction
                 messageId,
                 message.TransactionIds.Count);
 
+            message.CorrelationId = Guid.NewGuid().ToString("N");   
             await _mediator.Send(
                 new ProcessConsolidationBatchCommand(message, messageId),
                 cancellationToken);

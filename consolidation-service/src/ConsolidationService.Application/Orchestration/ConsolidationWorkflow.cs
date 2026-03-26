@@ -42,7 +42,8 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
     /// <param name="dailyBatchRepository">Repository for batch persistence operations.</param>
     /// <param name="transactionRepository">Repository for transaction persistence operations.</param>
     /// <param name="errorRepository">Repository for storing transaction processing errors.</param>
-    /// <param name="retryPolicy">Retry policy used to handle transient failures.</param>
+    /// /// <param name="retryPolicy">Retry policy used to handle transient failures.</param>
+    /// <param name="unitOfWork">Retry policy used to handle transient failures.</param>
     /// <param name="logger">Logger instance for observability.</param>
     public ConsolidationWorkflow(
         RegisterBatchStep registerBatchStep,
@@ -97,7 +98,7 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
         {
             await _retryPolicy.ExecuteAsync(
                 token => ExecutePipelineAsync(context, token),
-            cancellationToken);
+                cancellationToken);
 
             _logger.LogInformation(
                 "Consolidation workflow completed successfully. BatchId={BatchId}",
@@ -161,8 +162,9 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
                 context.Message.BatchId);
 
             await _dailyBatchRepository.MarkAsSucceededAsync(
-            context.Message.BatchId,
-            cancellationToken);
+                context.Message.BatchId,
+                cancellationToken);
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return;
         }
@@ -177,10 +179,6 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
         await _finalizeBatchStep.ExecuteAsync(context, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation("Pipeline finished. BatchId={BatchId}", context.Message.BatchId);
-
-
 
         _logger.LogInformation("Pipeline finished. BatchId={BatchId}", context.Message.BatchId);
     }
@@ -205,7 +203,7 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
             retryCount,
             cancellationToken);
 
-        var remainingTransactionIds = context.Transactions
+        var remainingTransactionIds = (context.Transactions ?? Array.Empty<Transaction>())
             .Select(transaction => transaction.TransactionId)
             .Distinct()
             .ToArray();
@@ -230,7 +228,13 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
         var occurredOnUtc = DateTime.UtcNow;
 
         var failures = remainingTransactionIds
-            .Select(id => new TransactionProcessingError { Id =  id, BatchId = message.BatchId, ErrorMessage =  exception.Message,CreatedAtUtc =  occurredOnUtc})
+            .Select(id => new TransactionProcessingError
+            {
+                Id = id,
+                BatchId = message.BatchId,
+                ErrorMessage = exception.Message,
+                CreatedAtUtc = occurredOnUtc
+            })
             .ToArray();
 
         await _errorRepository.InsertAsync(failures, cancellationToken);
@@ -239,7 +243,7 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
             remainingTransactionIds,
             message.BatchId,
             retryCount,
-            Domain.Enums.TransactionStatus.PendingManualReview,
+            ConsolidationStatus.PendingManualReview,
             cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

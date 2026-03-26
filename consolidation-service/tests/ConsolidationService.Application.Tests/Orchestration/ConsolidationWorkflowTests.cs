@@ -50,7 +50,7 @@ public sealed class ConsolidationWorkflowTests
         var transactionId2 = Guid.NewGuid();
         var message = CreateMessage([transactionId1, transactionId2]);
 
-        transactionRepository.GetPendingByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        transactionRepository.GetPublishedByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(
             [
                 new Transaction
@@ -152,7 +152,7 @@ public sealed class ConsolidationWorkflowTests
                 Arg.Any<IReadOnlyCollection<Guid>>(),
                 Arg.Any<Guid>(),
                 Arg.Any<int>(),
-                Arg.Any<TransactionStatus>(),
+                Arg.Any<ConsolidationStatus>(),
                 CancellationToken.None);
 
         await errorRepository.DidNotReceive()
@@ -196,7 +196,7 @@ public sealed class ConsolidationWorkflowTests
         var transactionId = Guid.NewGuid();
         var message = CreateMessage([transactionId]);
 
-        transactionRepository.GetPendingByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        transactionRepository.GetPublishedByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(
             [
                 new Transaction

@@ -80,7 +80,7 @@ public sealed class ValidateTransactionsStep
             invalidTransactionIds.ToArray(),
             context.Message.BatchId,
             0,
-            TransactionStatus.PendingManualReview,
+            ConsolidationStatus.PendingManualReview,
             cancellationToken);
     }
 
@@ -98,5 +98,6 @@ public sealed class ValidateTransactionsStep
             throw new InvalidOperationException(ValidationMessages.Transaction.AmountMustBeGreaterThanZero);
         }
 
+      
     }
 }

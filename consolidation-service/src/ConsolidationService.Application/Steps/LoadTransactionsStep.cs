@@ -51,7 +51,7 @@ public sealed class LoadTransactionsStep
     {
         var message = context.Message;
 
-        var transactions = await _transactionRepository.GetPendingByIdsAsync(
+        var transactions = await _transactionRepository.GetPublishedByIdsAsync(
             message.TransactionIds,
             cancellationToken);
 
