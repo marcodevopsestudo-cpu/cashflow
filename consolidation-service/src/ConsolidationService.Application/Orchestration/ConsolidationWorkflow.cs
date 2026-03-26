@@ -216,11 +216,7 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
         var occurredOnUtc = DateTime.UtcNow;
 
         var failures = remainingTransactionIds
-            .Select(id => new TransactionProcessingError(
-                id,
-                message.BatchId,
-                exception.Message,
-                occurredOnUtc))
+            .Select(id => new TransactionProcessingError { Id =  id, BatchId = message.BatchId, ErrorMessage =  exception.Message,CreatedAtUtc =  occurredOnUtc})
             .ToArray();
 
         await _errorRepository.InsertAsync(failures, cancellationToken);

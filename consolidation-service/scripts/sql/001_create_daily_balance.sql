@@ -1,4 +1,6 @@
-create table if not exists daily_balance
+create schema if not exists transaction;
+
+create table if not exists transaction.daily_balance
 (
     balance_date date primary key,
     total_credits numeric(18, 2) not null default 0,

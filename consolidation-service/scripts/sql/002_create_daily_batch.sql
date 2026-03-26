@@ -1,4 +1,6 @@
-create table if not exists daily_batch
+create schema if not exists transaction;
+
+create table if not exists transaction.daily_batch
 (
     batch_id uuid primary key,
     correlation_id varchar(64) not null,
@@ -11,4 +13,5 @@ create table if not exists daily_batch
     completed_at_utc timestamp without time zone null
 );
 
-create index if not exists ix_daily_batch_status on daily_batch(status);
+create index if not exists ix_daily_batch_status
+    on transaction.daily_batch(status);
