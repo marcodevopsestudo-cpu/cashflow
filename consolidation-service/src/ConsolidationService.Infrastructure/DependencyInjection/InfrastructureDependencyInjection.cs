@@ -1,10 +1,11 @@
 using ConsolidationService.Application.Abstractions;
-using ConsolidationService.Infrastructure.Data;
 using ConsolidationService.Infrastructure.Persistence;
 using ConsolidationService.Infrastructure.Resilience;
 using ConsolidationService.Infrastructure.Resources;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TransactionService.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace ConsolidationService.Infrastructure.DependencyInjection;
 
@@ -45,7 +46,7 @@ public static class InfrastructureDependencyInjection
                 InfrastructureMessageCatalog.PostgresConnectionStringNotFound);
         }
 
-        services.AddSingleton<NpgsqlConnectionFactory>();
+        services.AddDbContext<TransactionDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IDailyBalanceRepository, DailyBalanceRepository>();
         services.AddScoped<IDailyBatchRepository, DailyBatchRepository>();

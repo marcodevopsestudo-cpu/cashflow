@@ -1,8 +1,8 @@
 using ConsolidationService.Application.Abstractions;
 using ConsolidationService.Domain.Entities;
 using ConsolidationService.Domain.Enums;
-using ConsolidationService.Infrastructure.Data;
-using Dapper;
+using Microsoft.EntityFrameworkCore;
+using TransactionService.Infrastructure.Persistence;
 
 namespace ConsolidationService.Infrastructure.Persistence;
 
@@ -11,17 +11,11 @@ namespace ConsolidationService.Infrastructure.Persistence;
 /// </summary>
 public sealed class DailyBatchRepository : IDailyBatchRepository
 {
-    private readonly NpgsqlConnectionFactory _connectionFactory;
+    private readonly TransactionDbContext _dbContext;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DailyBatchRepository"/> class.
-    /// </summary>
-    /// <param name="connectionFactory">
-    /// Factory used to create PostgreSQL connections for repository operations.
-    /// </param>
-    public DailyBatchRepository(NpgsqlConnectionFactory connectionFactory)
+    public DailyBatchRepository(TransactionDbContext dbContext)
     {
-        _connectionFactory = connectionFactory;
+        _dbContext = dbContext;
     }
 
     /// <summary>
@@ -29,25 +23,9 @@ public sealed class DailyBatchRepository : IDailyBatchRepository
     /// </summary>
     public async Task<DailyBatch?> GetAsync(Guid batchId, CancellationToken cancellationToken)
     {
-        const string sql = """
-            select
-                batch_id as BatchId,
-                correlation_id as CorrelationId,
-                status as Status,
-                transaction_count as TransactionCount,
-                retry_count as RetryCount,
-                last_error as LastError,
-                created_at_utc as CreatedAtUtc,
-                started_at_utc as StartedAtUtc,
-                completed_at_utc as CompletedAtUtc
-            from daily_batch
-            where batch_id = @BatchId;
-            """;
-
-        await using var connection = _connectionFactory.Create();
-
-        return await connection.QuerySingleOrDefaultAsync<DailyBatch>(
-            new CommandDefinition(sql, new { BatchId = batchId }, cancellationToken: cancellationToken));
+        return await _dbContext.Set<DailyBatch>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.BatchId == batchId, cancellationToken);
     }
 
     /// <summary>
@@ -55,40 +33,32 @@ public sealed class DailyBatchRepository : IDailyBatchRepository
     /// </summary>
     public async Task<DailyBatch> UpsertPendingAsync(Guid batchId, string correlationId, int transactionCount, CancellationToken cancellationToken)
     {
-        const string sql = """
-            insert into daily_batch (batch_id, correlation_id, status, transaction_count, retry_count, created_at_utc)
-            values (@BatchId, @CorrelationId, @Status, @TransactionCount, 0, @CreatedAtUtc)
-            on conflict (batch_id)
-            do update set correlation_id = excluded.correlation_id,
-                          transaction_count = excluded.transaction_count
-            returning
-                batch_id as BatchId,
-                correlation_id as CorrelationId,
-                status as Status,
-                transaction_count as TransactionCount,
-                retry_count as RetryCount,
-                last_error as LastError,
-                created_at_utc as CreatedAtUtc,
-                started_at_utc as StartedAtUtc,
-                completed_at_utc as CompletedAtUtc;
-            """;
+        var entity = await _dbContext.Set<DailyBatch>()
+            .FirstOrDefaultAsync(x => x.BatchId == batchId, cancellationToken);
 
-        var createdAtUtc = DateTime.UtcNow;
+        if (entity is null)
+        {
+            entity = new DailyBatch
+            {
+                BatchId = batchId,
+                CorrelationId = correlationId,
+                TransactionCount = transactionCount,
+                Status = BatchStatus.Pending,
+                RetryCount = 0,
+                CreatedAtUtc = DateTime.UtcNow
+            };
 
-        await using var connection = _connectionFactory.Create();
+            await _dbContext.AddAsync(entity, cancellationToken);
+        }
+        else
+        {
+            entity.CorrelationId = correlationId;
+            entity.TransactionCount = transactionCount;
+        }
 
-        return await connection.QuerySingleAsync<DailyBatch>(
-            new CommandDefinition(
-                sql,
-                new
-                {
-                    BatchId = batchId,
-                    CorrelationId = correlationId,
-                    TransactionCount = transactionCount,
-                    Status = (int)BatchStatus.Pending,
-                    CreatedAtUtc = createdAtUtc
-                },
-                cancellationToken: cancellationToken));
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return entity;
     }
 
     /// <summary>
@@ -96,27 +66,15 @@ public sealed class DailyBatchRepository : IDailyBatchRepository
     /// </summary>
     public async Task MarkAsProcessingAsync(Guid batchId, CancellationToken cancellationToken)
     {
-        const string sql = """
-            update daily_batch
-               set status = @Status,
-                   started_at_utc = coalesce(started_at_utc, @StartedAtUtc)
-             where batch_id = @BatchId;
-            """;
+        var entity = await _dbContext.Set<DailyBatch>()
+            .FirstOrDefaultAsync(x => x.BatchId == batchId, cancellationToken);
 
-        var startedAtUtc = DateTime.UtcNow;
+        if (entity is null) return;
 
-        await using var connection = _connectionFactory.Create();
+        entity.Status = BatchStatus.Processing;
+        entity.StartedAtUtc ??= DateTime.UtcNow;
 
-        await connection.ExecuteAsync(
-            new CommandDefinition(
-                sql,
-                new
-                {
-                    BatchId = batchId,
-                    Status = (int)BatchStatus.Processing,
-                    StartedAtUtc = startedAtUtc
-                },
-                cancellationToken: cancellationToken));
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>
@@ -124,28 +82,16 @@ public sealed class DailyBatchRepository : IDailyBatchRepository
     /// </summary>
     public async Task MarkAsSucceededAsync(Guid batchId, CancellationToken cancellationToken)
     {
-        const string sql = """
-            update daily_batch
-               set status = @Status,
-                   completed_at_utc = @CompletedAtUtc,
-                   last_error = null
-             where batch_id = @BatchId;
-            """;
+        var entity = await _dbContext.Set<DailyBatch>()
+            .FirstOrDefaultAsync(x => x.BatchId == batchId, cancellationToken);
 
-        var completedAtUtc = DateTime.UtcNow;
+        if (entity is null) return;
 
-        await using var connection = _connectionFactory.Create();
+        entity.Status = BatchStatus.Succeeded;
+        entity.CompletedAtUtc = DateTime.UtcNow;
+        entity.LastError = null;
 
-        await connection.ExecuteAsync(
-            new CommandDefinition(
-                sql,
-                new
-                {
-                    BatchId = batchId,
-                    Status = (int)BatchStatus.Succeeded,
-                    CompletedAtUtc = completedAtUtc
-                },
-                cancellationToken: cancellationToken));
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>
@@ -153,30 +99,16 @@ public sealed class DailyBatchRepository : IDailyBatchRepository
     /// </summary>
     public async Task MarkAsFailedAsync(Guid batchId, string errorMessage, int retryCount, CancellationToken cancellationToken)
     {
-        const string sql = """
-            update daily_batch
-               set status = @Status,
-                   retry_count = @RetryCount,
-                   completed_at_utc = @CompletedAtUtc,
-                   last_error = @ErrorMessage
-             where batch_id = @BatchId;
-            """;
+        var entity = await _dbContext.Set<DailyBatch>()
+            .FirstOrDefaultAsync(x => x.BatchId == batchId, cancellationToken);
 
-        var completedAtUtc = DateTime.UtcNow;
+        if (entity is null) return;
 
-        await using var connection = _connectionFactory.Create();
+        entity.Status = BatchStatus.Failed;
+        entity.RetryCount = retryCount;
+        entity.CompletedAtUtc = DateTime.UtcNow;
+        entity.LastError = errorMessage;
 
-        await connection.ExecuteAsync(
-            new CommandDefinition(
-                sql,
-                new
-                {
-                    BatchId = batchId,
-                    Status = (int)BatchStatus.Failed,
-                    RetryCount = retryCount,
-                    CompletedAtUtc = completedAtUtc,
-                    ErrorMessage = errorMessage
-                },
-                cancellationToken: cancellationToken));
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

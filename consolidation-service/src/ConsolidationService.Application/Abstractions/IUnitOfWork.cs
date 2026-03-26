@@ -7,20 +7,9 @@ namespace ConsolidationService.Application.Abstractions;
 public interface IUnitOfWork
 {
     /// <summary>
-    /// Begins a new transactional scope for persistence operations.
+    /// Persists pending changes.
     /// </summary>
-    /// <param name="cancellationToken">
-    /// Token used to cancel the operation.
-    /// </param>
-    /// <returns>
-    /// An <see cref="IAsyncDisposable"/> representing the transactional scope.
-    /// Disposing the returned instance is expected to finalize the transaction
-    /// (commit or rollback, depending on the implementation).
-    /// </returns>
-    /// <remarks>
-    /// The implementation should ensure that all operations executed within the scope
-    /// participate in the same transaction. Proper disposal of the returned scope is required
-    /// to guarantee consistency and resource cleanup.
-    /// </remarks>
-    Task<IAsyncDisposable> BeginAsync(CancellationToken cancellationToken);
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The number of affected rows.</returns>
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
