@@ -45,6 +45,6 @@ public sealed class TransactionProcessingErrorRepository : ITransactionProcessin
         await _dbContext.Set<TransactionProcessingError>()
             .AddRangeAsync(items, cancellationToken);
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        
     }
 }

@@ -56,8 +56,6 @@ public sealed class DailyBatchRepository : IDailyBatchRepository
             entity.TransactionCount = transactionCount;
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
         return entity;
     }
 
@@ -74,7 +72,7 @@ public sealed class DailyBatchRepository : IDailyBatchRepository
         entity.Status = BatchStatus.Processing;
         entity.StartedAtUtc ??= DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        
     }
 
     /// <summary>
@@ -91,7 +89,7 @@ public sealed class DailyBatchRepository : IDailyBatchRepository
         entity.CompletedAtUtc = DateTime.UtcNow;
         entity.LastError = null;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+       
     }
 
     /// <summary>
@@ -111,6 +109,6 @@ public sealed class DailyBatchRepository : IDailyBatchRepository
         entity.CompletedAtUtc = DateTime.UtcNow;
         entity.LastError = errorMessage;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        
     }
 }

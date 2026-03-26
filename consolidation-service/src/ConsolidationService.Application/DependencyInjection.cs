@@ -35,6 +35,7 @@ public static class DependencyInjection
     /// </remarks>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+
         services.AddMediatR(configuration =>
             configuration.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
 
@@ -42,7 +43,6 @@ public static class DependencyInjection
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
         services.AddScoped<IConsolidationWorkflow, ConsolidationWorkflow>();
-
         services.AddScoped<RegisterBatchStep>();
         services.AddScoped<LoadTransactionsStep>();
         services.AddScoped<ValidateTransactionsStep>();
