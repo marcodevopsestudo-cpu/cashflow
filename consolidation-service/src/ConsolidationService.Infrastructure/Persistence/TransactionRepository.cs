@@ -1,7 +1,6 @@
 using ConsolidationService.Application.Abstractions;
 using ConsolidationService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using TransactionService.Domain.Enums;
 using TransactionService.Infrastructure.Persistence;
 
 namespace ConsolidationService.Infrastructure.Persistence;
@@ -25,13 +24,17 @@ public sealed class TransactionRepository : ITransactionRepository
         IReadOnlyCollection<Guid> transactionIds,
         CancellationToken cancellationToken)
     {
-        var result = await _dbContext.Set<Transaction>()
+        var query = _dbContext.Set<Transaction>()
             .AsNoTracking()
             .Where(x =>
                     transactionIds.Contains(x.TransactionId) &&
                     (x.ConsolidationStatus == null ||x.ConsolidationStatus == ConsolidationStatus.NotStarted))
-            .ToListAsync(cancellationToken);
 
+        var result = await query.ToListAsync(cancellationToken);
+
+        Console.WriteLine($"Query executada {query.ToQueryString()}");
+
+        var sql = query.ToQueryString();
         return result;
     }
 
