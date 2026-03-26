@@ -54,7 +54,7 @@ public sealed class FinalizeBatchStep
         var message = context.Message;
 
         var transactionIds = context.Transactions
-            .Select(transaction => transaction.Id)
+            .Select(transaction => transaction.TransactionId)
             .ToArray();
 
         var consolidatedAtUtc = DateTime.UtcNow;

@@ -54,17 +54,17 @@ public sealed class ConsolidationWorkflowTests
             [
                 new Transaction
                 {
-                    Id = transactionId1,
+                    TransactionId = transactionId1,
                     Amount = 100m,
-                    Type = TransactionType.Credit,
-                    OccurredAtUtc = new DateTime(2026, 3, 22, 10, 0, 0, DateTimeKind.Utc)
+                    Kind = TransactionKind.Credit,
+                    UpdatedAtUtc = new DateTime(2026, 3, 22, 10, 0, 0, DateTimeKind.Utc)
                 },
                 new Transaction
                 {
-                    Id = transactionId2,
+                    TransactionId = transactionId2,
                     Amount = 40m,
-                    Type = TransactionType.Debit,
-                    OccurredAtUtc = new DateTime(2026, 3, 22, 11, 0, 0, DateTimeKind.Utc)
+                    Kind = TransactionKind.Debit,
+                    UpdatedAtUtc = new DateTime(2026, 3, 22, 11, 0, 0, DateTimeKind.Utc)
                 }
             ]);
 
@@ -145,7 +145,7 @@ public sealed class ConsolidationWorkflowTests
                 Arg.Any<IReadOnlyCollection<Guid>>(),
                 Arg.Any<Guid>(),
                 Arg.Any<int>(),
-                Arg.Any<TransactionProcessingStatus>(),
+                Arg.Any<TransactionStatus>(),
                 CancellationToken.None);
 
         await errorRepository.DidNotReceive()

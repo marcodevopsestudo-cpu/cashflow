@@ -2,6 +2,7 @@ using ConsolidationService.Application.Abstractions;
 using ConsolidationService.Domain.Entities;
 using ConsolidationService.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+
 using TransactionService.Infrastructure.Persistence;
 
 namespace ConsolidationService.Infrastructure.Persistence;
@@ -28,8 +29,8 @@ public sealed class TransactionRepository : ITransactionRepository
         var result = await _dbContext.Set<Transaction>()
             .AsNoTracking()
             .Where(x =>
-                transactionIds.Contains(x.Id) &&
-                x.ProcessingStatus == TransactionProcessingStatus.Pending)
+                transactionIds.Contains(x.TransactionId) &&
+                x.Status == TransactionStatus.Pending)
             .ToListAsync(cancellationToken);
 
         return result;
@@ -45,15 +46,13 @@ public sealed class TransactionRepository : ITransactionRepository
         CancellationToken cancellationToken)
     {
         var transactions = await _dbContext.Set<Transaction>()
-            .Where(x => transactionIds.Contains(x.Id))
+            .Where(x => transactionIds.Contains(x.TransactionId))
             .ToListAsync(cancellationToken);
 
         foreach (var tx in transactions)
         {
-            tx.ProcessingStatus = TransactionProcessingStatus.Consolidated;
-            tx.LastBatchId = batchId;
+            tx.Status = TransactionStatus.Consolidated;
             tx.ConsolidatedAtUtc = consolidatedAtUtc;
-            tx.ProcessingAttemptCount++;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -66,18 +65,16 @@ public sealed class TransactionRepository : ITransactionRepository
         IReadOnlyCollection<Guid> transactionIds,
         Guid batchId,
         int attemptCount,
-        TransactionProcessingStatus status,
+        TransactionStatus status,
         CancellationToken cancellationToken)
     {
         var transactions = await _dbContext.Set<Transaction>()
-            .Where(x => transactionIds.Contains(x.Id))
+            .Where(x => transactionIds.Contains(x.TransactionId))
             .ToListAsync(cancellationToken);
 
         foreach (var tx in transactions)
         {
-            tx.ProcessingStatus = status;
-            tx.LastBatchId = batchId;
-            tx.ProcessingAttemptCount = attemptCount;
+            tx.Status = status;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

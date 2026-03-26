@@ -42,14 +42,13 @@ public sealed class AggregateTransactionsStep
     /// </remarks>
     public Task ExecuteAsync(BatchExecutionContext context, CancellationToken cancellationToken)
     {
-        context.Aggregates = context.Transactions
-            .GroupBy(transaction => transaction.BalanceDate)
+        context.Aggregates = [.. context.Transactions
+            .GroupBy(transaction => DateOnly.FromDateTime(transaction.TransactionDateUtc))
             .Select(group => new DailyAggregate(
                 group.Key,
-                group.Where(transaction => transaction.Type == TransactionType.Credit).Sum(transaction => transaction.Amount),
-                group.Where(transaction => transaction.Type == TransactionType.Debit).Sum(transaction => transaction.Amount)))
-            .OrderBy(aggregate => aggregate.BalanceDate)
-            .ToArray();
+                group.Where(transaction => transaction.Kind == TransactionKind.Credit).Sum(transaction => transaction.Amount),
+                group.Where(transaction => transaction.Kind == TransactionKind.Debit).Sum(transaction => transaction.Amount)))
+            .OrderBy(aggregate => aggregate.BalanceDate)];
 
         _logger.LogInformation(
             BatchLogMessages.Workflow.AggregatedTransactions,

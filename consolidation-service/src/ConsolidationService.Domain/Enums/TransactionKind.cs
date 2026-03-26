@@ -6,7 +6,7 @@ namespace ConsolidationService.Domain.Enums;
 /// <remarks>
 /// Determines how a transaction impacts the balance during aggregation.
 /// </remarks>
-public enum TransactionType
+public enum TransactionKind
 {
     /// <summary>
     /// Represents a credit transaction that increases the balance.
