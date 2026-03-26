@@ -55,7 +55,7 @@ public sealed class TransactionRepository : ITransactionRepository
             tx.ConsolidatedAtUtc = consolidatedAtUtc;
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+       
     }
 
     /// <summary>
@@ -77,6 +77,6 @@ public sealed class TransactionRepository : ITransactionRepository
             tx.Status = status;
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+       
     }
 }

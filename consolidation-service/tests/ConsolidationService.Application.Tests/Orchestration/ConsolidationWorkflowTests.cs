@@ -29,6 +29,7 @@ public sealed class ConsolidationWorkflowTests
         var dailyBalanceRepository = Substitute.For<IDailyBalanceRepository>();
         var errorRepository = Substitute.For<ITransactionProcessingErrorRepository>();
         var retryPolicy = Substitute.For<IRetryPolicy>();
+        var unitOfWork = Substitute.For<IUnitOfWork>();
 
         retryPolicy.ExecuteAsync(Arg.Any<Func<CancellationToken, Task>>(), Arg.Any<CancellationToken>())
             .Returns(call => call.Arg<Func<CancellationToken, Task>>().Invoke(CancellationToken.None));
@@ -73,6 +74,7 @@ public sealed class ConsolidationWorkflowTests
             transactionRepository,
             dailyBalanceRepository,
             errorRepository,
+            unitOfWork,
             retryPolicy);
 
         // Act
@@ -101,6 +103,9 @@ public sealed class ConsolidationWorkflowTests
             .InsertAsync(
                 Arg.Any<IReadOnlyCollection<TransactionProcessingError>>(),
                 Arg.Any<CancellationToken>());
+
+        await unitOfWork.Received(1)
+            .SaveChangesAsync(CancellationToken.None);
     }
 
     /// <summary>
@@ -115,6 +120,7 @@ public sealed class ConsolidationWorkflowTests
         var dailyBalanceRepository = Substitute.For<IDailyBalanceRepository>();
         var errorRepository = Substitute.For<ITransactionProcessingErrorRepository>();
         var retryPolicy = Substitute.For<IRetryPolicy>();
+        var unitOfWork = Substitute.For<IUnitOfWork>();
 
         retryPolicy.ExecuteAsync(Arg.Any<Func<CancellationToken, Task>>(), Arg.Any<CancellationToken>())
             .Returns(call => call.Arg<Func<CancellationToken, Task>>().Invoke(CancellationToken.None));
@@ -129,6 +135,7 @@ public sealed class ConsolidationWorkflowTests
             transactionRepository,
             dailyBalanceRepository,
             errorRepository,
+            unitOfWork,
             retryPolicy);
 
         // Act
@@ -152,6 +159,87 @@ public sealed class ConsolidationWorkflowTests
             .InsertAsync(
                 Arg.Any<IReadOnlyCollection<TransactionProcessingError>>(),
                 CancellationToken.None);
+
+        await unitOfWork.DidNotReceive()
+            .SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// Ensures that the workflow finalizes and persists when there are no valid transactions after validation.
+    /// </summary>
+    [Fact]
+    public async Task Should_finalize_and_persist_when_no_valid_transactions_remain_after_validation()
+    {
+        // Arrange
+        var batchRepository = Substitute.For<IDailyBatchRepository>();
+        var transactionRepository = Substitute.For<ITransactionRepository>();
+        var dailyBalanceRepository = Substitute.For<IDailyBalanceRepository>();
+        var errorRepository = Substitute.For<ITransactionProcessingErrorRepository>();
+        var retryPolicy = Substitute.For<IRetryPolicy>();
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+
+        retryPolicy.ExecuteAsync(Arg.Any<Func<CancellationToken, Task>>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.Arg<Func<CancellationToken, Task>>().Invoke(CancellationToken.None));
+
+        batchRepository.GetAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((DailyBatch?)null);
+
+        batchRepository.UpsertPendingAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(call => new DailyBatch
+            {
+                BatchId = call.Arg<Guid>(),
+                CorrelationId = call.ArgAt<string>(1),
+                Status = BatchStatus.Pending,
+                TransactionCount = call.ArgAt<int>(2)
+            });
+
+        var transactionId = Guid.NewGuid();
+        var message = CreateMessage([transactionId]);
+
+        transactionRepository.GetPendingByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(
+            [
+                new Transaction
+            {
+                TransactionId = transactionId,
+                Amount = -10m, // use um valor que sua validação realmente rejeite
+                Kind = TransactionKind.Credit,
+                UpdatedAtUtc = new DateTime(2026, 3, 22, 10, 0, 0, DateTimeKind.Utc)
+            }
+            ]);
+
+        var sut = CreateSut(
+            batchRepository,
+            transactionRepository,
+            dailyBalanceRepository,
+            errorRepository,
+            unitOfWork,
+            retryPolicy);
+
+        // Act
+        await sut.ExecuteAsync(message, CancellationToken.None);
+
+        // Assert
+        await batchRepository.Received(1)
+            .MarkAsProcessingAsync(message.BatchId, CancellationToken.None);
+
+        await dailyBalanceRepository.DidNotReceive()
+            .UpsertAsync(
+                Arg.Any<IReadOnlyCollection<ConsolidationService.Domain.ValueObjects.DailyAggregate>>(),
+                Arg.Any<CancellationToken>());
+
+        await transactionRepository.DidNotReceive()
+            .MarkAsConsolidatedAsync(
+                Arg.Any<IReadOnlyCollection<Guid>>(),
+                Arg.Any<Guid>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<CancellationToken>());
+
+        await batchRepository.Received(1)
+            .MarkAsSucceededAsync(message.BatchId, CancellationToken.None);
+
+        await unitOfWork.Received(1)
+            .SaveChangesAsync(CancellationToken.None);
     }
 
     /// <summary>
@@ -161,6 +249,7 @@ public sealed class ConsolidationWorkflowTests
     /// <param name="transactionRepository">Mocked transaction repository.</param>
     /// <param name="dailyBalanceRepository">Mocked daily balance repository.</param>
     /// <param name="errorRepository">Mocked error repository.</param>
+    /// <param name="unitOfWork">Mocked unit of work.</param>
     /// <param name="retryPolicy">Mocked retry policy.</param>
     /// <returns>A configured <see cref="ConsolidationWorkflow"/> instance.</returns>
     private static ConsolidationWorkflow CreateSut(
@@ -168,6 +257,7 @@ public sealed class ConsolidationWorkflowTests
         ITransactionRepository transactionRepository,
         IDailyBalanceRepository dailyBalanceRepository,
         ITransactionProcessingErrorRepository errorRepository,
+        IUnitOfWork unitOfWork,
         IRetryPolicy retryPolicy)
     {
         return new ConsolidationWorkflow(
@@ -183,6 +273,7 @@ public sealed class ConsolidationWorkflowTests
             batchRepository,
             transactionRepository,
             errorRepository,
+            unitOfWork,
             retryPolicy,
             NullLogger<ConsolidationWorkflow>.Instance);
     }

@@ -79,6 +79,6 @@ public sealed class DailyBalanceRepository : IDailyBalanceRepository
             existingBalance.UpdatedAtUtc = updatedAtUtc;
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+       
     }
 }
