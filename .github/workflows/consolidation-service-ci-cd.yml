@@ -25,7 +25,7 @@ env:
   TEST_WORKING_DIR: ./consolidation-service
   DB_MIGRATOR_PROJECT_PATH: ./db-migrator/db-migrator.csproj
   MIGRATIONS_PATH: ./consolidation-service/scripts
-  KEY_VAULT_NAME: m8mld4-kv-cashflow-dev
+  KEY_VAULT_NAME: z3jw1v-kv-cashflow-dev
   POSTGRES_SECRET_NAME: postgres-connection-string
 
 jobs:
