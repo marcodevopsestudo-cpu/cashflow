@@ -1,4 +1,5 @@
 using ConsolidationService.Domain.Enums;
+using TransactionService.Domain.Enums;
 
 namespace ConsolidationService.Domain.Entities;
 
@@ -65,7 +66,7 @@ public sealed class Transaction
     /// <summary>
     /// Gets or sets the processing status used by the consolidation workflow.
     /// </summary>
-    public TransactionStatus ProcessingStatus { get; set; }
+    public ConsolidationStatus? ConsolidationStatus { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC timestamp indicating when the transaction was consolidated.
@@ -75,10 +76,10 @@ public sealed class Transaction
     /// <summary>
     /// Gets or sets the batch identifier responsible for the latest processing attempt.
     /// </summary>
-    public Guid? LastBatchId { get; set; }
+    public Guid? LastConsolidationBatchId { get; set; }
 
     /// <summary>
     /// Gets or sets the number of processing attempts made for this transaction.
     /// </summary>
-    public int ProcessingAttemptCount { get; set; }
+    public int ConsolidationAttemptCount { get; set; }
 }

@@ -66,7 +66,7 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
         builder.Property(x => x.UpdatedAtUtc)
             .HasColumnName("updated_at_utc");
 
-        builder.Property(x => x.ProcessingStatus)
+        builder.Property(x => x.ConsolidationStatus)
             .HasColumnName("processing_status")
             .HasConversion<int>()
             .IsRequired();
@@ -74,14 +74,14 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
         builder.Property(x => x.ConsolidatedAtUtc)
             .HasColumnName("consolidated_at_utc");
 
-        builder.Property(x => x.LastBatchId)
+        builder.Property(x => x.LastConsolidationBatchId)
             .HasColumnName("last_batch_id");
 
-        builder.Property(x => x.ProcessingAttemptCount)
+        builder.Property(x => x.ConsolidationAttemptCount)
             .HasColumnName("processing_attempt_count")
             .IsRequired();
 
-        builder.HasIndex(x => x.ProcessingStatus)
+        builder.HasIndex(x => x.ConsolidationStatus)
             .HasDatabaseName("ix_transactions_processing_status");
     }
 }

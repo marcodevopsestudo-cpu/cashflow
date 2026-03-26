@@ -1,14 +1,13 @@
 using ConsolidationService.Application.Abstractions;
 using ConsolidationService.Domain.Entities;
-using ConsolidationService.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
-
+using TransactionService.Domain.Enums;
 using TransactionService.Infrastructure.Persistence;
 
 namespace ConsolidationService.Infrastructure.Persistence;
 
 /// <summary>
-/// Provides PostgreSQL persistence operations for transaction retrieval and state transitions.
+/// Provides PostgreSQL persistence operations for transaction retrieval and consolidation state transitions.
 /// </summary>
 public sealed class TransactionRepository : ITransactionRepository
 {
@@ -20,17 +19,17 @@ public sealed class TransactionRepository : ITransactionRepository
     }
 
     /// <summary>
-    /// Retrieves pending transactions filtered by the specified identifiers.
+    /// Retrieves transactions eligible for consolidation filtered by the specified identifiers.
     /// </summary>
-    public async Task<IReadOnlyCollection<Transaction>> GetPendingByIdsAsync(
+    public async Task<IReadOnlyCollection<Transaction>> GetPublishedByIdsAsync(
         IReadOnlyCollection<Guid> transactionIds,
         CancellationToken cancellationToken)
     {
         var result = await _dbContext.Set<Transaction>()
             .AsNoTracking()
             .Where(x =>
-                transactionIds.Contains(x.TransactionId) &&
-                x.Status == TransactionStatus.Pending)
+                    transactionIds.Contains(x.TransactionId) &&
+                    (x.ConsolidationStatus == null ||x.ConsolidationStatus == ConsolidationStatus.NotStarted))
             .ToListAsync(cancellationToken);
 
         return result;
@@ -51,21 +50,21 @@ public sealed class TransactionRepository : ITransactionRepository
 
         foreach (var tx in transactions)
         {
-            tx.Status = TransactionStatus.Consolidated;
+            tx.ConsolidationStatus = ConsolidationStatus.Consolidated;
             tx.ConsolidatedAtUtc = consolidatedAtUtc;
+            tx.LastConsolidationBatchId = batchId;
+            tx.ConsolidationAttemptCount += 1;
         }
-
-       
     }
 
     /// <summary>
-    /// Marks the specified transactions as failed during processing.
+    /// Marks the specified transactions as failed during consolidation.
     /// </summary>
     public async Task MarkAsFailedAsync(
         IReadOnlyCollection<Guid> transactionIds,
         Guid batchId,
         int attemptCount,
-        TransactionStatus status,
+        ConsolidationStatus status,
         CancellationToken cancellationToken)
     {
         var transactions = await _dbContext.Set<Transaction>()
@@ -74,9 +73,9 @@ public sealed class TransactionRepository : ITransactionRepository
 
         foreach (var tx in transactions)
         {
-            tx.Status = status;
+            tx.ConsolidationStatus = status;
+            tx.LastConsolidationBatchId = batchId;
+            tx.ConsolidationAttemptCount = attemptCount;
         }
-
-       
     }
 }

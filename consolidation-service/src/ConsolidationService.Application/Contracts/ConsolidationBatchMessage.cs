@@ -16,7 +16,7 @@ public sealed class ConsolidationBatchMessage
     /// <remarks>
     /// This value should remain consistent throughout the entire processing lifecycle.
     /// </remarks>
-    public string CorrelationId { get; init; } = string.Empty;
+    public string CorrelationId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets the UTC timestamp indicating when the message was published.
