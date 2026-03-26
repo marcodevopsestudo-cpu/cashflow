@@ -67,18 +67,18 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
             .HasColumnName("updated_at_utc");
 
         builder.Property(x => x.ConsolidationStatus)
-            .HasColumnName("processing_status")
-            .HasConversion<int>()
+            .HasColumnName("consolidation_status")
+            .HasConversion<string>()
             .IsRequired();
 
         builder.Property(x => x.ConsolidatedAtUtc)
             .HasColumnName("consolidated_at_utc");
 
         builder.Property(x => x.LastConsolidationBatchId)
-            .HasColumnName("last_batch_id");
+            .HasColumnName("last_consolidation_batch_id");
 
         builder.Property(x => x.ConsolidationAttemptCount)
-            .HasColumnName("processing_attempt_count")
+            .HasColumnName("consolidation_attempt_count")
             .IsRequired();
 
         builder.HasIndex(x => x.ConsolidationStatus)
