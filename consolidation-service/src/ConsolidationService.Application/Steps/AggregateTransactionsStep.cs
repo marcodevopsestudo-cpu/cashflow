@@ -42,6 +42,7 @@ public sealed class AggregateTransactionsStep
     /// </remarks>
     public Task ExecuteAsync(BatchExecutionContext context, CancellationToken cancellationToken)
     {
+
         context.Aggregates = [.. context.Transactions
             .GroupBy(transaction => DateOnly.FromDateTime(transaction.TransactionDateUtc))
             .Select(group => new DailyAggregate(
