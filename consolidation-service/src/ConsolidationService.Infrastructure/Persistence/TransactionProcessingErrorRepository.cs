@@ -1,7 +1,6 @@
 using ConsolidationService.Application.Abstractions;
 using ConsolidationService.Domain.Entities;
-using ConsolidationService.Infrastructure.Data;
-using Dapper;
+using TransactionService.Infrastructure.Persistence;
 
 namespace ConsolidationService.Infrastructure.Persistence;
 
@@ -11,17 +10,17 @@ namespace ConsolidationService.Infrastructure.Persistence;
 /// </summary>
 public sealed class TransactionProcessingErrorRepository : ITransactionProcessingErrorRepository
 {
-    private readonly NpgsqlConnectionFactory _connectionFactory;
+    private readonly TransactionDbContext _dbContext;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TransactionProcessingErrorRepository"/> class.
     /// </summary>
-    /// <param name="connectionFactory">
-    /// Factory used to create PostgreSQL connections for repository operations.
+    /// <param name="dbContext">
+    /// DbContext used for repository operations.
     /// </param>
-    public TransactionProcessingErrorRepository(NpgsqlConnectionFactory connectionFactory)
+    public TransactionProcessingErrorRepository(TransactionDbContext dbContext)
     {
-        _connectionFactory = connectionFactory;
+        _dbContext = dbContext;
     }
 
     /// <summary>
@@ -38,44 +37,14 @@ public sealed class TransactionProcessingErrorRepository : ITransactionProcessin
     /// </returns>
     public async Task InsertAsync(IReadOnlyCollection<TransactionProcessingError> items, CancellationToken cancellationToken)
     {
-        const string sql = """
-            insert into transaction_processing_error
-            (
-                batch_id,
-                transaction_id,
-                correlation_id,
-                error_code,
-                error_message,
-                stack_trace,
-                created_at_utc,
-                retry_count,
-                status
-            )
-            values
-            (
-                @BatchId,
-                @TransactionId,
-                @CorrelationId,
-                @ErrorCode,
-                @ErrorMessage,
-                @StackTrace,
-                @CreatedAtUtc,
-                @RetryCount,
-                @Status
-            );
-            """;
-
         if (items.Count == 0)
         {
             return;
         }
 
-        await using var connection = _connectionFactory.Create();
+        await _dbContext.Set<TransactionProcessingError>()
+            .AddRangeAsync(items, cancellationToken);
 
-        await connection.ExecuteAsync(
-            new CommandDefinition(
-                sql,
-                items,
-                cancellationToken: cancellationToken));
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

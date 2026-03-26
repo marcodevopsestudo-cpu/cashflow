@@ -1,7 +1,8 @@
 using ConsolidationService.Application.Abstractions;
+using ConsolidationService.Domain.Entities;
 using ConsolidationService.Domain.ValueObjects;
-using ConsolidationService.Infrastructure.Data;
-using Dapper;
+using Microsoft.EntityFrameworkCore;
+using TransactionService.Infrastructure.Persistence;
 
 namespace ConsolidationService.Infrastructure.Persistence;
 
@@ -10,17 +11,17 @@ namespace ConsolidationService.Infrastructure.Persistence;
 /// </summary>
 public sealed class DailyBalanceRepository : IDailyBalanceRepository
 {
-    private readonly NpgsqlConnectionFactory _connectionFactory;
+    private readonly TransactionDbContext _dbContext;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DailyBalanceRepository"/> class.
     /// </summary>
-    /// <param name="connectionFactory">
-    /// Factory used to create PostgreSQL connections for repository operations.
+    /// <param name="dbContext">
+    /// DbContext used for repository operations.
     /// </param>
-    public DailyBalanceRepository(NpgsqlConnectionFactory connectionFactory)
+    public DailyBalanceRepository(TransactionDbContext dbContext)
     {
-        _connectionFactory = connectionFactory;
+        _dbContext = dbContext;
     }
 
     /// <summary>
@@ -37,38 +38,47 @@ public sealed class DailyBalanceRepository : IDailyBalanceRepository
     /// </returns>
     /// <remarks>
     /// When a balance date already exists, the stored totals are incremented using the incoming values,
-    /// and the resulting balance is recalculated in the database.
+    /// and the resulting balance is recalculated in memory before persisting the changes.
     /// </remarks>
     public async Task UpsertAsync(IReadOnlyCollection<DailyAggregate> aggregates, CancellationToken cancellationToken)
     {
-        const string sql = """
-            insert into daily_balance (balance_date, total_credits, total_debits, balance, updated_at_utc)
-            values (@BalanceDate, @TotalCredits, @TotalDebits, @Balance, @UpdatedAtUtc)
-            on conflict (balance_date)
-            do update set
-                total_credits = daily_balance.total_credits + excluded.total_credits,
-                total_debits = daily_balance.total_debits + excluded.total_debits,
-                balance = (daily_balance.total_credits + excluded.total_credits) - (daily_balance.total_debits + excluded.total_debits),
-                updated_at_utc = excluded.updated_at_utc;
-            """;
+        if (aggregates.Count == 0)
+        {
+            return;
+        }
 
         var updatedAtUtc = DateTime.UtcNow;
+        var balanceDates = aggregates.Select(x => x.BalanceDate).ToArray();
 
-        var rows = aggregates.Select(aggregate => new
+        var existingBalances = await _dbContext.Set<DailyBalance>()
+            .Where(x => balanceDates.Contains(x.BalanceDate))
+            .ToListAsync(cancellationToken);
+
+        foreach (var aggregate in aggregates)
         {
-            aggregate.BalanceDate,
-            aggregate.TotalCredits,
-            aggregate.TotalDebits,
-            aggregate.Balance,
-            UpdatedAtUtc = updatedAtUtc
-        }).ToArray();
+            var existingBalance = existingBalances.FirstOrDefault(x => x.BalanceDate == aggregate.BalanceDate);
 
-        await using var connection = _connectionFactory.Create();
+            if (existingBalance is null)
+            {
+                var newBalance = new DailyBalance
+                {
+                    BalanceDate = aggregate.BalanceDate,
+                    TotalCredits = aggregate.TotalCredits,
+                    TotalDebits = aggregate.TotalDebits,
+                    Balance = aggregate.Balance,
+                    UpdatedAtUtc = updatedAtUtc
+                };
 
-        await connection.ExecuteAsync(
-            new CommandDefinition(
-                sql,
-                rows,
-                cancellationToken: cancellationToken));
+                await _dbContext.Set<DailyBalance>().AddAsync(newBalance, cancellationToken);
+                continue;
+            }
+
+            existingBalance.TotalCredits += aggregate.TotalCredits;
+            existingBalance.TotalDebits += aggregate.TotalDebits;
+            existingBalance.Balance = existingBalance.TotalCredits - existingBalance.TotalDebits;
+            existingBalance.UpdatedAtUtc = updatedAtUtc;
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }
