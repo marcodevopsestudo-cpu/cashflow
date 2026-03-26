@@ -41,24 +41,24 @@ public sealed class AggregateTransactionsStepTests
             [
                 new Transaction
                 {
-                    Id = transactionId1,
+                    TransactionId = transactionId1,
                     Amount = 100m,
-                    Type = TransactionType.Credit,
-                    OccurredAtUtc = new DateTime(2026, 3, 22, 10, 0, 0, DateTimeKind.Utc)
+                    Kind = TransactionKind.Credit,
+                    TransactionDateUtc = new DateTime(2026, 3, 22, 10, 0, 0, DateTimeKind.Utc)
                 },
                 new Transaction
                 {
-                    Id = transactionId2,
+                    TransactionId = transactionId2,
                     Amount = 25m,
-                    Type = TransactionType.Debit,
-                    OccurredAtUtc = new DateTime(2026, 3, 22, 11, 0, 0, DateTimeKind.Utc)
+                    Kind = TransactionKind.Debit,
+                    TransactionDateUtc = new DateTime(2026, 3, 22, 11, 0, 0, DateTimeKind.Utc)
                 },
                 new Transaction
                 {
-                    Id = transactionId3,
+                    TransactionId = transactionId3,
                     Amount = 50m,
-                    Type = TransactionType.Credit,
-                    OccurredAtUtc = new DateTime(2026, 3, 23, 9, 0, 0, DateTimeKind.Utc)
+                    Kind = TransactionKind.Credit,
+                    TransactionDateUtc = new DateTime(2026, 3, 23, 9, 0, 0, DateTimeKind.Utc)
                 }
             ]
         };
@@ -68,9 +68,17 @@ public sealed class AggregateTransactionsStepTests
 
         // Assert
         context.Aggregates.Should().HaveCount(2);
-        context.Aggregates.First().TotalCredits.Should().Be(100m);
-        context.Aggregates.First().TotalDebits.Should().Be(25m);
-        context.Aggregates.Last().TotalCredits.Should().Be(50m);
-        context.Aggregates.Last().TotalDebits.Should().Be(0m);
+
+        context.Aggregates.Should().Contain(x =>
+            x.BalanceDate == new DateOnly(2026, 3, 22) &&
+            x.TotalCredits == 100m &&
+            x.TotalDebits == 25m &&
+            x.Balance == 75m);
+
+        context.Aggregates.Should().Contain(x =>
+            x.BalanceDate == new DateOnly(2026, 3, 23) &&
+            x.TotalCredits == 50m &&
+            x.TotalDebits == 0m &&
+            x.Balance == 50m);
     }
 }

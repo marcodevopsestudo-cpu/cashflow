@@ -1,4 +1,5 @@
 using ConsolidationService.Domain.Enums;
+using System.Transactions;
 
 namespace ConsolidationService.Domain.Entities;
 
@@ -12,50 +13,61 @@ namespace ConsolidationService.Domain.Entities;
 public sealed class Transaction
 {
     /// <summary>
-    /// Gets or sets the unique identifier of the transaction.
+    /// Gets the transaction identifier.
     /// </summary>
-    public Guid Id { get; set; }
+    public Guid TransactionId { get;  set; }
 
     /// <summary>
-    /// Gets or sets the monetary amount of the transaction.
+    /// Gets the account identifier.
     /// </summary>
-    public decimal Amount { get; set; }
+    public string AccountId { get;  set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the type of the transaction, such as credit or debit.
+    /// Gets the transaction kind.
     /// </summary>
-    public TransactionType Type { get; set; }
+    public TransactionKind Kind { get;  set; }
 
     /// <summary>
-    /// Gets or sets the UTC timestamp indicating when the transaction occurred.
+    /// Gets the transaction amount.
     /// </summary>
-    public DateTime OccurredAtUtc { get; set; }
+    public decimal Amount { get;  set; }
 
     /// <summary>
-    /// Gets or sets the current processing status of the transaction.
+    /// Gets the currency.
     /// </summary>
-    public TransactionProcessingStatus ProcessingStatus { get; set; }
+    public string Currency { get;  set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the identifier of the last batch that processed this transaction.
+    /// Gets the transaction date in UTC.
     /// </summary>
-    public Guid? LastBatchId { get; set; }
+    public DateTime TransactionDateUtc { get;  set; }
 
     /// <summary>
-    /// Gets or sets the UTC timestamp indicating when the transaction was consolidated.
+    /// Gets the optional description.
     /// </summary>
-    public DateTime? ConsolidatedAtUtc { get; set; }
+    public string? Description { get;  set; }
 
     /// <summary>
-    /// Gets or sets the number of processing attempts performed for this transaction.
+    /// Gets the correlation id.
     /// </summary>
-    public int ProcessingAttemptCount { get; set; }
+    public string CorrelationId { get;  set; } = string.Empty;
 
     /// <summary>
-    /// Gets the balance date derived from <see cref="OccurredAtUtc"/>.
+    /// Gets the transaction status.
     /// </summary>
-    /// <remarks>
-    /// This value is used to group transactions during daily aggregation.
-    /// </remarks>
-    public DateOnly BalanceDate => DateOnly.FromDateTime(OccurredAtUtc);
+    public Enums.TransactionStatus Status { get;  set; }
+
+    /// <summary>
+    /// Gets the creation timestamp in UTC.
+    /// </summary>
+    public DateTime CreatedAtUtc { get;  set; }
+
+    /// <summary>
+    /// Gets the last update timestamp in UTC.
+    /// </summary>
+    public DateTime? UpdatedAtUtc { get;  set; }
+
+    public DateTime? ConsolidatedAtUtc { get;  set; }
+     
+
 }

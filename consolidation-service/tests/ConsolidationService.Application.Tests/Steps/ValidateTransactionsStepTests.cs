@@ -43,17 +43,17 @@ public sealed class ValidateTransactionsStepTests
             [
                 new Transaction
                 {
-                    Id = validTransactionId,
+                    TransactionId = validTransactionId,
                     Amount = 100m,
-                    Type = TransactionType.Credit,
-                    OccurredAtUtc = new DateTime(2026, 3, 22, 10, 0, 0, DateTimeKind.Utc)
+                    Kind = TransactionKind.Credit,
+                    UpdatedAtUtc = new DateTime(2026, 3, 22, 10, 0, 0, DateTimeKind.Utc)
                 },
                 new Transaction
                 {
-                    Id = invalidTransactionId,
+                    TransactionId = invalidTransactionId,
                     Amount = 0m,
-                    Type = TransactionType.Debit,
-                    OccurredAtUtc = new DateTime(2026, 3, 22, 11, 0, 0, DateTimeKind.Utc)
+                    Kind = TransactionKind.Debit,
+                    UpdatedAtUtc = new DateTime(2026, 3, 22, 11, 0, 0, DateTimeKind.Utc)
                 }
             ]
         };
@@ -66,7 +66,7 @@ public sealed class ValidateTransactionsStepTests
         await step.ExecuteAsync(context, CancellationToken.None);
 
         context.Transactions.Should().HaveCount(1);
-        context.Transactions.Single().Id.Should().Be(validTransactionId);
+        context.Transactions.Single().TransactionId.Should().Be(validTransactionId);
 
         await errorRepository.Received(1).InsertAsync(
             Arg.Is<IReadOnlyCollection<TransactionProcessingError>>(errors =>
@@ -81,7 +81,7 @@ public sealed class ValidateTransactionsStepTests
             Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.SequenceEqual(expectedIds)),
             batchId,
             0,
-            TransactionProcessingStatus.PendingManualReview,
+            TransactionStatus.PendingManualReview,
             CancellationToken.None);
     }
 }

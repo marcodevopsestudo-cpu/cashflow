@@ -55,17 +55,17 @@ public sealed class ValidateTransactionsStep
             }
             catch (Exception exception)
             {
-                invalidTransactionIds.Add(transaction.Id);
+                invalidTransactionIds.Add(transaction.TransactionId);
 
                 errors.Add(new TransactionProcessingError(
-                    transaction.Id,
+                    transaction.TransactionId,
                     context.Message.BatchId,
                     exception.Message,
                     occurredOnUtc));
 
                 _logger.LogWarning(
                     BatchLogMessages.Workflow.TransactionMovedToManualReview,
-                    transaction.Id,
+                    transaction.TransactionId,
                     context.Message.BatchId,
                     exception.Message);
             }
@@ -84,7 +84,7 @@ public sealed class ValidateTransactionsStep
             invalidTransactionIds.ToArray(),
             context.Message.BatchId,
             0,
-            TransactionProcessingStatus.PendingManualReview,
+            TransactionStatus.PendingManualReview,
             cancellationToken);
     }
 
@@ -102,9 +102,5 @@ public sealed class ValidateTransactionsStep
             throw new InvalidOperationException(ValidationMessages.Transaction.AmountMustBeGreaterThanZero);
         }
 
-        if (transaction.BalanceDate == default)
-        {
-            throw new InvalidOperationException(ValidationMessages.Transaction.BalanceDateInvalid);
-        }
     }
 }

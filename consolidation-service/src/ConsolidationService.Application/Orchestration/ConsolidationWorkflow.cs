@@ -192,7 +192,7 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
             cancellationToken);
 
         var remainingTransactionIds = context.Transactions
-            .Select(transaction => transaction.Id)
+            .Select(transaction => transaction.TransactionId)
             .Distinct()
             .ToArray();
 
@@ -229,7 +229,7 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
             remainingTransactionIds,
             message.BatchId,
             retryCount,
-            Domain.Enums.TransactionProcessingStatus.PendingManualReview,
+            Domain.Enums.TransactionStatus.PendingManualReview,
             cancellationToken);
 
         _logger.LogError(
