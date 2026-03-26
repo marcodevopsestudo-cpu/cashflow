@@ -242,6 +242,8 @@ public sealed class ConsolidationWorkflow : IConsolidationWorkflow
             Domain.Enums.TransactionStatus.PendingManualReview,
             cancellationToken);
 
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
         _logger.LogError(
             exception,
             BatchLogMessages.Workflow.MovedToManualReview,
