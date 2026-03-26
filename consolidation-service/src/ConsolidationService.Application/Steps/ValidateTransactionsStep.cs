@@ -57,11 +57,7 @@ public sealed class ValidateTransactionsStep
             {
                 invalidTransactionIds.Add(transaction.TransactionId);
 
-                errors.Add(new TransactionProcessingError(
-                    transaction.TransactionId,
-                    context.Message.BatchId,
-                    exception.Message,
-                    occurredOnUtc));
+                errors.Add(new TransactionProcessingError { Id = Guid.NewGuid(), BatchId = context.Message.BatchId, ErrorMessage = exception.Message, CreatedAtUtc = occurredOnUtc });
 
                 _logger.LogWarning(
                     BatchLogMessages.Workflow.TransactionMovedToManualReview,

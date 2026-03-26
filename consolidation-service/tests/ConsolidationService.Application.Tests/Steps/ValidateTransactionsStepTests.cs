@@ -23,6 +23,7 @@ public sealed class ValidateTransactionsStepTests
     [Fact]
     public async Task Should_keep_valid_transactions_and_move_invalid_ones_to_manual_review()
     {
+        // Arrange
         var errorRepository = Substitute.For<ITransactionProcessingErrorRepository>();
         var transactionRepository = Substitute.For<ITransactionRepository>();
 
@@ -46,14 +47,14 @@ public sealed class ValidateTransactionsStepTests
                     TransactionId = validTransactionId,
                     Amount = 100m,
                     Kind = TransactionKind.Credit,
-                    UpdatedAtUtc = new DateTime(2026, 3, 22, 10, 0, 0, DateTimeKind.Utc)
+                    TransactionDateUtc = new DateTime(2026, 3, 22, 10, 0, 0, DateTimeKind.Utc)
                 },
                 new Transaction
                 {
                     TransactionId = invalidTransactionId,
                     Amount = 0m,
                     Kind = TransactionKind.Debit,
-                    UpdatedAtUtc = new DateTime(2026, 3, 22, 11, 0, 0, DateTimeKind.Utc)
+                    TransactionDateUtc = new DateTime(2026, 3, 22, 11, 0, 0, DateTimeKind.Utc)
                 }
             ]
         };
@@ -63,17 +64,28 @@ public sealed class ValidateTransactionsStepTests
             transactionRepository,
             NullLogger<ValidateTransactionsStep>.Instance);
 
+        // Act
         await step.ExecuteAsync(context, CancellationToken.None);
 
+        // Assert
         context.Transactions.Should().HaveCount(1);
         context.Transactions.Single().TransactionId.Should().Be(validTransactionId);
 
         await errorRepository.Received(1).InsertAsync(
-            Arg.Is<IReadOnlyCollection<TransactionProcessingError>>(errors =>
-                errors.Count == 1 &&
-                errors.Single().TransactionId == invalidTransactionId &&
-                errors.Single().BatchId == batchId),
+            Arg.Any<IReadOnlyCollection<TransactionProcessingError>>(),
             CancellationToken.None);
+
+        var errorCall = errorRepository.ReceivedCalls()
+            .Single(x => x.GetMethodInfo().Name == nameof(ITransactionProcessingErrorRepository.InsertAsync));
+
+        var errors = errorCall.GetArguments()[0]
+            .Should()
+            .BeAssignableTo<IReadOnlyCollection<TransactionProcessingError>>()
+            .Which;
+
+        errors.Should().HaveCount(1);
+        errors.Single().BatchId.Should().Be(batchId);
+        errors.Single().TransactionId.Should().BeNull();
 
         var expectedIds = new[] { invalidTransactionId };
 

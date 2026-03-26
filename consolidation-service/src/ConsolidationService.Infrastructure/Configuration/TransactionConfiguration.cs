@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 /// <summary>
 /// Configures the database mapping for the <see cref="Transaction"/> entity.
 /// </summary>
-public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
+public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
 {
     /// <summary>
     /// Configures the entity properties, keys, and column mappings for <see cref="Transaction"/>.
@@ -32,7 +32,8 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
 
         builder.Property(x => x.Amount)
             .HasColumnName("amount")
-            .HasColumnType("numeric(18,2)");
+            .HasColumnType("numeric(18,2)")
+            .IsRequired();
 
         builder.Property(x => x.Currency)
             .HasColumnName("currency")
@@ -64,5 +65,23 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
 
         builder.Property(x => x.UpdatedAtUtc)
             .HasColumnName("updated_at_utc");
+
+        builder.Property(x => x.ProcessingStatus)
+            .HasColumnName("processing_status")
+            .HasConversion<int>()
+            .IsRequired();
+
+        builder.Property(x => x.ConsolidatedAtUtc)
+            .HasColumnName("consolidated_at_utc");
+
+        builder.Property(x => x.LastBatchId)
+            .HasColumnName("last_batch_id");
+
+        builder.Property(x => x.ProcessingAttemptCount)
+            .HasColumnName("processing_attempt_count")
+            .IsRequired();
+
+        builder.HasIndex(x => x.ProcessingStatus)
+            .HasDatabaseName("ix_transactions_processing_status");
     }
 }

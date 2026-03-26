@@ -13,9 +13,8 @@ public sealed class DailyBalanceConfiguration : IEntityTypeConfiguration<DailyBa
     /// <param name="builder">The builder used to configure the entity.</param>
     public void Configure(EntityTypeBuilder<DailyBalance> builder)
     {
-        builder.ToTable("daily_balance");
+        builder.ToTable("daily_balance", "transaction");
 
-        // PK
         builder.HasKey(x => x.BalanceDate);
 
         builder.Property(x => x.BalanceDate)

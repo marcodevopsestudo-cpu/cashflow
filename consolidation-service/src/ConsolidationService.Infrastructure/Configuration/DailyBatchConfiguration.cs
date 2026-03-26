@@ -1,5 +1,4 @@
 using ConsolidationService.Domain.Entities;
-using ConsolidationService.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -14,9 +13,8 @@ public sealed class DailyBatchConfiguration : IEntityTypeConfiguration<DailyBatc
     /// <param name="builder">The builder used to configure the entity.</param>
     public void Configure(EntityTypeBuilder<DailyBatch> builder)
     {
-        builder.ToTable("daily_batch");
+        builder.ToTable("daily_batch", "transaction");
 
-        // PK
         builder.HasKey(x => x.BatchId);
 
         builder.Property(x => x.BatchId)
@@ -24,13 +22,12 @@ public sealed class DailyBatchConfiguration : IEntityTypeConfiguration<DailyBatc
 
         builder.Property(x => x.CorrelationId)
             .HasColumnName("correlation_id")
-            .HasMaxLength(120)
+            .HasMaxLength(64)
             .IsRequired();
 
         builder.Property(x => x.Status)
             .HasColumnName("status")
-            .HasConversion<string>() 
-            .HasMaxLength(50)
+            .HasConversion<int>()
             .IsRequired();
 
         builder.Property(x => x.TransactionCount)
@@ -43,7 +40,7 @@ public sealed class DailyBatchConfiguration : IEntityTypeConfiguration<DailyBatc
 
         builder.Property(x => x.LastError)
             .HasColumnName("last_error")
-            .HasMaxLength(2000);
+            .HasColumnType("text");
 
         builder.Property(x => x.CreatedAtUtc)
             .HasColumnName("created_at_utc")
@@ -54,5 +51,8 @@ public sealed class DailyBatchConfiguration : IEntityTypeConfiguration<DailyBatc
 
         builder.Property(x => x.CompletedAtUtc)
             .HasColumnName("completed_at_utc");
+
+        builder.HasIndex(x => x.Status)
+            .HasDatabaseName("ix_daily_batch_status");
     }
 }

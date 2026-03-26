@@ -1,8 +1,10 @@
-create table if not exists transaction_processing_error
+create schema if not exists transaction;
+
+create table if not exists transaction.transaction_processing_error
 (
     id bigserial primary key,
     batch_id uuid not null,
-    transaction_id bigint null,
+    transaction_id uuid null,
     correlation_id varchar(64) not null,
     error_code varchar(128) not null,
     error_message text not null,
@@ -13,7 +15,7 @@ create table if not exists transaction_processing_error
 );
 
 create index if not exists ix_transaction_processing_error_batch_id
-    on transaction_processing_error(batch_id);
+    on transaction.transaction_processing_error(batch_id);
 
 create index if not exists ix_transaction_processing_error_transaction_id
-    on transaction_processing_error(transaction_id);
+    on transaction.transaction_processing_error(transaction_id);
