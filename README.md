@@ -81,6 +81,40 @@ If Azure Service Bus is unavailable:
 
 ---
 
+## Security
+
+The solution enforces authentication and authorization using Microsoft Entra ID.
+
+### Authentication
+
+- All protected endpoints require a valid JWT issued by Microsoft Entra ID.
+- Token validation includes issuer, audience, and signature verification.
+- Only trusted identity providers are accepted.
+
+### Authorization
+
+- Role-based access control (RBAC) is enforced at the API level.
+- Requests are validated against required roles and permissions.
+- Unauthorized requests are rejected before reaching the application layer.
+
+### Middleware Enforcement
+
+Security and request integrity concerns are centralized using middleware:
+
+- Authentication middleware validates incoming tokens.
+- Authorization middleware enforces access policies.
+- Idempotency middleware ensures that duplicate requests do not result in duplicated operations.
+- Correlation ID middleware ensures traceability across secure requests.
+
+### Secure Configuration
+
+- Sensitive settings (e.g., client IDs, secrets, connection strings) are not hardcoded.
+- Configuration is managed via secure providers (e.g., Key Vault).
+
+### Design Consideration
+
+Security is applied at the entry point of the system, ensuring that only authenticated and authorized requests can access business functionality, without impacting internal processing flows.
+
 ## Validation
 
 The solution was validated through functional and concurrent execution testing.
