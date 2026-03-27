@@ -1,287 +1,355 @@
+---
+
+# 5) `docs/non-functional-requirements.md`
+
+```md
 # Non-Functional Requirements
 
-This document explains how the current architecture addresses the main non-functional concerns of the challenge, especially:
+This document explains how the current architecture addresses the main non-functional concerns of the challenge.
 
-- throughput under peak load;
-- resilience under downstream failure;
-- controlled handling of incomplete derived data;
-- operational observability.
-
-The goal is not only to describe implementation details, but to make the architectural reasoning explicit.
+The goal is not only to list technical mechanisms, but to make the architectural reasoning explicit.
 
 ---
 
-## 1. Architectural Principle
+## 1. Core Architectural Principle
 
-The most important non-functional decision in the solution is the separation between:
+The main non-functional design decision is the separation between:
 
-- the **transaction write path**; and
+- the **transaction write path**;
 - the **daily balance consolidation path**.
 
-This separation exists because the challenge requires that the transaction service must remain available even if the consolidation system fails.
+This separation exists because the system must preserve transaction-service availability even when consolidation is failing, delayed or temporarily unavailable.
 
-To satisfy that requirement, the architecture ensures that transaction ingestion depends only on:
+That principle drives most of the architecture.
 
-- request validation;
-- durable persistence in PostgreSQL;
+---
+
+## 2. Availability
+
+### Requirement Intent
+
+Transaction ingestion should remain available even when downstream consolidation is degraded.
+
+### Current Architectural Response
+
+The write path depends primarily on:
+
+- HTTP/API execution;
+- validation;
+- PostgreSQL persistence;
 - durable outbox registration.
 
-The write path does **not** wait for balance consolidation to complete.
+It does **not** depend on:
+
+- immediate balance recalculation;
+- immediate worker execution;
+- immediate successful consolidation.
+
+### Practical Impact
+
+If consolidation fails:
+
+- valid transactions can still be accepted;
+- the source of truth remains durable;
+- the read model may lag;
+- recovery can happen later.
+
+### Assessment
+
+This is one of the strongest non-functional characteristics of the current solution.
 
 ---
 
-## 2. Throughput Strategy
+## 3. Throughput and Concurrency
 
-The architecture is designed so that peak pressure is absorbed primarily by the Transaction Service and the persistence/buffering layers, not by synchronous balance calculation.
+### Requirement Intent
 
-### Write-path behavior
+The system should support peak load without making balance processing the bottleneck of every write request.
 
-During transaction ingestion, the system performs only the essential synchronous operations:
+### Current Architectural Response
 
-- request validation;
-- persistence of transaction data;
-- registration of the integration event in the outbox.
+The write path was intentionally designed to perform only bounded synchronous work:
 
-This keeps the request lifecycle bounded mainly by:
+- validate request;
+- persist transaction;
+- register outbox event.
 
-- HTTP handling;
-- database write latency.
+Heavy or expandable work is shifted to the asynchronous side.
 
-### Why this matters
+### Why This Helps
 
-Because balance processing is asynchronous, the system avoids coupling ingestion latency to:
+This reduces coupling between request latency and:
 
-- downstream worker execution time;
-- queue consumer throughput;
-- temporary consolidation degradation.
+- worker throughput;
+- batch processing duration;
+- downstream queue consumption speed;
+- projection update cost.
 
-### Result
+### Practical Outcome
 
-Under peak traffic:
+Under concurrency:
 
-- transaction ingestion remains available;
-- consolidation may lag;
-- the system continues accepting source transactions without forcing synchronous balance updates.
+- the API remains simpler and faster;
+- asynchronous backlog can absorb pressure over time;
+- consolidation lag is preferable to blocking all callers.
 
----
+### Assessment
 
-## 3. Buffering and Backpressure Model
-
-The solution uses multiple buffering layers, each with a specific role in resilience and flow control.
-
-### 3.1 PostgreSQL as source-of-truth buffer
-
-PostgreSQL stores all source transactions durably.
-
-This is the primary durability boundary of the system and guarantees that financial source data is recorded before any asynchronous processing happens.
-
-### 3.2 Outbox as publication recovery buffer
-
-The outbox table stores the integration intent in the same transaction as the original write.
-
-If message publication cannot happen immediately, the outbox entry remains available for later retry.
-
-This prevents publication gaps between source persistence and broker delivery.
-
-### 3.3 Azure Service Bus as asynchronous work buffer
-
-Azure Service Bus buffers work between publisher and consumer.
-
-It helps absorb traffic spikes, supports asynchronous scaling and prevents the consumer runtime from becoming a direct dependency of the producer request path.
-
-### Result
-
-If the consolidation service becomes slow or temporarily unavailable:
-
-- transactions continue to be accepted;
-- outbox records can accumulate safely;
-- queued messages can be processed later when capacity is restored.
-
-This is the core mechanism that preserves write-path availability during downstream degradation.
+The design is appropriate for burst traffic and concurrent ingestion, especially for an MVP focused on architectural soundness.
 
 ---
 
-## 4. Resilience Strategy
+## 4. Scalability
 
-### 4.1 Protection of transaction ingestion
+### Requirement Intent
 
-The transaction service is protected from consolidation failures because:
+The system should scale more safely than a tightly coupled synchronous implementation.
 
-- consolidation is not executed inline;
-- publication is decoupled from the HTTP request path;
-- the outbox preserves recoverability if the broker is unavailable.
+### Current Architectural Response
 
-### 4.2 Publication recoverability
+The architecture supports scalability through:
 
-If Azure Service Bus is temporarily unavailable, the event is not lost because it has already been recorded in PostgreSQL.
+- stateless API behavior;
+- asynchronous processing separation;
+- message buffering;
+- projection-based query model.
 
-Publication can be retried later by the outbox publisher.
+### Scaling Perspective
 
-### 4.3 Consolidation recoverability
+#### Transaction Service
 
-When consolidation processing fails:
+Can scale independently around write-path demand.
 
-- retries are bounded;
-- backoff is applied;
-- exhausted failures are moved to a manual reconciliation path.
+#### Consolidation Service
 
-This avoids infinite retry loops and keeps operational handling explicit.
+Can evolve independently according to projection workload and backlog.
 
----
+#### Read Path
 
-## 5. Data Loss Model
+Uses a pre-aggregated table, reducing repeated calculation cost.
 
-The architecture is designed to eliminate loss of **source financial data** while allowing controlled temporary incompleteness in **derived balance data**.
+### Assessment
 
-### Important distinction
-
-- **Transactions (source data): not expected to be lost**
-- **Daily balance (derived data): may be temporarily incomplete until asynchronous processing catches up or failures are reconciled**
-
-This distinction is important because the challenge allows tolerance for limited loss, but the architecture intentionally protects the original financial events first.
-
-### Possible scenarios affecting derived data completeness
-
-1. message processing failure after retry exhaustion;
-2. consolidation workflow errors for a subset of transactions;
-3. extreme infrastructure disruption before all recovery mechanisms have acted.
-
-### Operational interpretation
-
-The design does not normalize silent loss.
-
-Instead, it makes incomplete derived data:
-
-- visible;
-- measurable;
-- recoverable through retry or manual follow-up.
+The architecture is more scalable than an inline synchronous consolidation model and provides a sound foundation for future scale-out decisions.
 
 ---
 
-## 6. Peak Load and the 5% Loss Constraint
+## 5. Resilience
 
-The challenge states that on peak days the consolidation flow may receive high request volume with at most 5% loss.
+### Requirement Intent
 
-The architecture addresses this requirement primarily through:
+The system should tolerate failures without immediately losing accepted transactions or taking down the entire flow.
 
-- decoupling;
-- buffering;
-- retry;
-- explicit failure tracking.
+### Current Architectural Response
 
-### How the design supports the target
+Resilience is addressed through:
 
-- the write path remains lightweight and durable;
-- asynchronous buffers absorb load variation;
-- failed items are recorded explicitly;
-- pending, processed and failed states can be measured.
+- decoupling between write and processing paths;
+- outbox-based durable integration intent;
+- asynchronous processing;
+- retry-oriented worker behavior;
+- isolation of failed items for manual follow-up.
 
-### What this means in practice
+### Service Bus Failure Scenario
 
-The repository demonstrates the architectural mechanisms required to support this target.
+If Service Bus is unavailable temporarily:
 
-Formal certification of this percentage, however, would depend on:
+- accepted transactions can still remain stored;
+- outbox entries remain pending;
+- consolidation is delayed;
+- normal flow can resume later.
 
-- dedicated load testing;
-- telemetry collection under stress;
-- operational validation in an environment representative of production.
+### Assessment
 
-That distinction is important and honest: the design is aligned with the requirement, but numeric validation still depends on test execution.
+The current resilience posture is strong for challenge scope and clearly demonstrates architectural maturity.
+
+---
+
+## 6. Controlled Data Loss Risk
+
+### Requirement Intent
+
+The architecture should minimize the risk of losing accepted business events.
+
+### Current Architectural Response
+
+The system favors durable acceptance through:
+
+- persistent source transaction storage;
+- durable outbox registration;
+- asynchronous continuation rather than inline distributed dependency.
+
+### Important Clarification
+
+This does **not** mean the current MVP is already formally certified for strict financial-grade loss guarantees.
+
+It means the architecture was intentionally designed to minimize avoidable loss windows in the implemented scope.
+
+### Assessment
+
+The solution demonstrates the right design direction and core reliability mechanisms.
 
 ---
 
 ## 7. Eventual Consistency
 
-Because the architecture is asynchronous, the `daily_balance` read model is eventually consistent with the source transactions.
+### Requirement Intent
 
-A small delay may exist between:
+The system may tolerate slight delay in consolidated balance visibility if that improves availability and scalability.
 
-- transaction creation; and
-- the visibility of the consolidated balance update.
+### Current Architectural Response
 
-This delay is influenced by:
+The `daily_balance` read model is updated asynchronously.
 
-- outbox polling interval;
-- queue buffering;
-- worker throughput;
-- retry timing in failure scenarios.
+Implications:
 
-### Why this trade-off was chosen
+- recently accepted transactions may not appear instantly in daily balance queries;
+- the lag window depends on asynchronous publication and processing;
+- the source transaction remains authoritative even while the read model catches up.
 
-This trade-off improves:
+### Why This Is Acceptable
+
+The architecture explicitly values:
 
 - write-path availability;
-- resilience under failure;
-- decoupling between services;
-- operational stability under burst traffic.
+- decoupling;
+- recoverability;
+- operational flexibility
 
-For the challenge scenario, this is a reasonable and deliberate architectural choice.
+over strict real-time read-model freshness.
 
----
+### Assessment
 
-## 8. Observability and Operational Control
-
-The architecture includes operational observability as part of the resilience model.
-
-### Monitoring goals
-
-The system should allow operators to understand:
-
-- how many transactions were ingested;
-- how many were published;
-- how many were consolidated successfully;
-- how many failed and require manual follow-up;
-- whether the backlog is growing.
-
-### Current operational support
-
-The repository already includes Application Insights integration and structured logging in the services.
-
-Persistence also supports operational tracking through explicit records such as:
-
-- processed transactions;
-- failed transactions in `transaction_processing_error`;
-- pending and completed batch states.
-
-### Why this matters
-
-Without observability, asynchronous resilience patterns become hard to operate.
-
-With observability, eventual consistency becomes manageable because backlog, failures and processing health can be measured and acted on.
+This is an intentional and appropriate trade-off.
 
 ---
 
-## 9. Cost and Operational Simplicity
+## 8. Observability
 
-The solution adopts a serverless execution model to keep cost and operations proportional to usage.
+### Requirement Intent
 
-This supports the challenge well because it avoids maintaining dedicated compute running continuously when not needed.
+The platform should provide sufficient visibility for a distributed asynchronous solution.
 
-### Benefits of this model
+### Current Architectural Response
 
-- lower idle cost;
-- automatic scaling behavior;
-- reduced operational overhead;
-- alignment with event-driven execution.
+The platform already includes observability foundations through Application Insights and structured operational flow.
 
-### Known trade-off
+Key visibility dimensions include:
 
-A serverless model may introduce cold start effects, which is a valid trade-off in exchange for cost control and lower operational complexity.
+- request health;
+- error tracking;
+- asynchronous processing status;
+- backlog and lag visibility;
+- failure diagnosis.
+
+### Current Limitation
+
+Observability is foundational, but not yet fully mature in terms of:
+
+- dashboards;
+- alerting;
+- SLO monitoring;
+- explicit freshness indicators for the read model.
+
+### Assessment
+
+Good MVP foundation, with clear next steps for production maturity.
 
 ---
 
-## 10. Final Assessment
+## 9. Security
 
-The non-functional strategy of the solution is based on a clear priority order:
+### Requirement Intent
 
-1. protect transaction ingestion;
-2. preserve source data durably;
-3. decouple balance processing;
-4. recover from downstream failure;
-5. make incomplete derived data visible and manageable.
+The platform should avoid insecure operational shortcuts and support modern cloud security practices.
 
-That priority is consistent with the challenge and with the architecture implemented in the repository.
+### Current Architectural Response
 
-```
+The solution already demonstrates:
 
-```
+- Key Vault secret usage;
+- Azure authentication from CI/CD through OIDC;
+- identity-aware cloud deployment foundations;
+- separation between code, secrets and infrastructure.
+
+### Current Limitation
+
+Further hardening is still needed in areas such as:
+
+- network isolation;
+- more advanced RBAC review;
+- policy enforcement;
+- explicit rotation and compliance controls.
+
+### Assessment
+
+Strong architectural direction for challenge scope, not yet fully hardened enterprise security posture.
+
+---
+
+## 10. Operability
+
+### Requirement Intent
+
+The solution should be operable, deployable and recoverable beyond local development.
+
+### Current Architectural Response
+
+Operability is strengthened through:
+
+- Terraform-based infrastructure provisioning;
+- GitHub Actions-based CI/CD;
+- automated build/test/deploy flow;
+- migration support through DB Migrator;
+- explicit processing separation.
+
+### Assessment
+
+This is a major strength of the solution because it demonstrates that the architecture is not only theoretically designed but also operationally deployable.
+
+---
+
+## 11. Business Continuity and Disaster Recovery
+
+### Requirement Intent
+
+The platform should have a path toward operational continuity under infrastructure incidents.
+
+### Current Architectural Response
+
+The current architecture already supports an important continuity principle:
+
+- accepted transactions should remain durable even when downstream processing is unavailable.
+
+However, full BC/DR maturity is not yet complete.
+
+### Remaining Gaps
+
+- formal backup policy validation;
+- tested restore procedures;
+- failover design;
+- DR runbooks;
+- RTO/RPO definition;
+- continuity drills.
+
+### Assessment
+
+The current state is appropriate for an MVP and clearly identifies the next maturity steps.
+
+---
+
+## 12. Summary
+
+The solution responds well to the most important non-functional concerns by making one central decision:
+
+> separate reliable transaction acceptance from asynchronous consolidated balance processing.
+
+That decision improves:
+
+- availability;
+- resilience;
+- scalability;
+- concurrency behavior;
+- operational flexibility.
+
+The main remaining work is not about changing the architectural direction, but about increasing production maturity around monitoring, DR, security hardening and operational tooling.

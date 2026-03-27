@@ -18,6 +18,58 @@ Instead of designing a synchronous end-to-end flow, the solution separates the s
 - a **write path**, optimized for low-latency and availability;
 - a **processing path**, optimized for asynchronous consolidation and recoverability.
 
+# Architecture Overview
+
+## 1. Architectural Context
+
+The challenge requires two core capabilities:
+
+- transaction control;
+- daily consolidated balance.
+
+It also introduces an important non-functional requirement:
+
+> the transaction service must remain available even if the daily consolidation service fails.
+
+That requirement is the main architectural driver of the solution.
+
+Because of that, the system is intentionally separated into:
+
+- a **write path**, optimized for low latency, durability and availability;
+- a **processing path**, optimized for asynchronous consolidation, recoverability and independent scale.
+
+This is a deliberate architectural trade-off in favor of availability and resilience over immediate strong consistency of derived data.
+
+---
+
+## 2. High-Level Architecture
+
+````mermaid
+flowchart LR
+    Client[Client / Postman / Consumer App]
+    TxApi[Transaction Service]
+    Pg[(PostgreSQL<br/>Transactions + Outbox + Read Model)]
+    Publisher[Outbox Publisher]
+    Sb[(Azure Service Bus)]
+    Consolidation[Consolidation Service]
+    Ai[Application Insights]
+    Kv[Key Vault]
+    GitHub[GitHub Actions + OIDC]
+    Azure[Azure Control Plane]
+    Tf[Terraform IaC]
+
+    Client -->|HTTP| TxApi
+    TxApi --> Pg
+    Pg --> Publisher
+    Publisher --> Sb
+    Sb --> Consolidation
+    Consolidation --> Pg
+    TxApi --> Ai
+    Consolidation --> Ai
+    TxApi --> Kv
+    Consolidation --> Kv
+    GitHub --> Azure
+    Tf --> Azure
 This design favors **availability, decoupling and resilience** over strict immediate consistency.
 
 ---
@@ -39,4 +91,4 @@ flowchart LR
     Consolidation --> Ai
     TxApi --> Kv[Key Vault]
     Consolidation --> Kv
-```
+````
