@@ -25,7 +25,7 @@ env:
   TEST_WORKING_DIR: ./transaction-service
   DB_MIGRATOR_PROJECT_PATH: ./db-migrator/db-migrator.csproj
   MIGRATIONS_PATH: ./transaction-service/scripts
-  KEY_VAULT_NAME: z3jw1v-kv-cashflow-dev
+  KEY_VAULT_NAME: yopyt5-kv-cashflow-dev
 
   POSTGRES_SECRET_NAME: postgres-connection-string
 
