@@ -69,7 +69,7 @@ If Azure Service Bus is unavailable:
 - consolidation is delayed
 - system recovers later
 
-👉 System degrades with delay, not failure.
+👉 The system degrades with delay, not with total failure.
 
 ---
 
@@ -83,18 +83,48 @@ If Azure Service Bus is unavailable:
 
 ## Validation
 
-Validated scenarios:
+The solution was validated through functional and concurrent execution testing.
+
+### Functional Validation
 
 - transaction ingestion
-- async consolidation
+- asynchronous consolidation
 - daily balance query
-- **100 concurrent requests (Postman)**
 
-Result:
+### Concurrent Validation
 
-- all transactions persisted
-- all processed successfully
-- no data inconsistency observed
+A Postman collection was used to simulate concurrent load:
+
+- 100 transaction requests executed
+- parallel execution using async/concurrent calls
+
+### Observed Results
+
+- all requests were successfully accepted
+- all transactions were persisted
+- all transactions were consolidated
+- no data inconsistency was observed
+
+### Interpretation
+
+This test validates the **architectural behavior under concurrency**, demonstrating:
+
+- a resilient write path
+- asynchronous processing decoupling
+- correct system behavior under concurrent execution
+
+### Important Note
+
+This is not a formal performance benchmark.
+It is a **practical validation of system behavior**, not a throughput or latency certification.
+
+---
+
+## Testing
+
+A Postman collection is available for testing:
+
+- [Postman Collection](docs/testing/cashflow-service.postman_collection.json)
 
 ---
 
