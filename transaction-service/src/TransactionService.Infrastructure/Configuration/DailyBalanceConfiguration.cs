@@ -14,7 +14,7 @@ public class DailyBalanceConfiguration : IEntityTypeConfiguration<DailyBalance>
     public void Configure(EntityTypeBuilder<DailyBalance> builder)
     {
 
-        builder.ToTable("daily_balance");
+        builder.ToTable("daily_balance","transaction");
 
         builder.HasKey(x => x.BalanceDate);
 
