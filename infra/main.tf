@@ -172,7 +172,7 @@ module "github_oidc" {
 
 resource "azurerm_key_vault_secret" "postgres_connection_string" {
   name         = "postgres-connection-string"
-  value        = module.postgres.connection_string
+  value = "${module.postgres.connection_string};Pooling=true;Minimum Pool Size=1;Maximum Pool Size=10;"
   key_vault_id = module.key_vault.id
 
   depends_on = [module.key_vault]
