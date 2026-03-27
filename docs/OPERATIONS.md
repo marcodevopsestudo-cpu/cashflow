@@ -1,241 +1,185 @@
 # Operations Guide
 
-This guide describes how to operate, validate and reason about the solution in local or controlled environments.
+## Overview
 
-It is intentionally focused on the current MVP posture while also highlighting the path toward stronger operational maturity.
+This document describes how to operate, validate and diagnose the system.
 
----
+The solution combines:
 
-## 1. Operational Scope
+- synchronous API ingestion
+- asynchronous message processing
+- projection-based read model
 
-The solution contains:
-
-- Transaction Service;
-- Consolidation Service;
-- DB Migrator;
-- Terraform-managed Azure infrastructure;
-- CI/CD pipelines with GitHub Actions.
-
-Operationally, the platform combines:
-
-- synchronous API behavior;
-- asynchronous background publication;
-- asynchronous projection processing;
-- cloud-hosted observability and secret-management foundations.
+Understanding these flows is essential for correct operation and troubleshooting.
 
 ---
 
-## 2. Recommended Local Execution Order
+## Local Execution Flow
 
-For local validation, the recommended order is:
+Recommended order:
 
-1. start PostgreSQL and confirm connectivity;
-2. apply database migrations with DB Migrator;
-3. configure local settings for services;
-4. start Transaction Service;
-5. start Consolidation Service;
-6. send test transactions;
-7. validate database state and read-model behavior;
-8. inspect logs and telemetry.
-
-This order reduces troubleshooting ambiguity.
+1. start PostgreSQL
+2. apply migrations using DB Migrator
+3. start Transaction Service
+4. start Consolidation Service
+5. send test transactions
+6. validate persistence and consolidation
 
 ---
 
-## 3. Local Validation Checklist
-
-After executing the local flow, validate the following:
+## Validation Checklist
 
 ### Transaction Ingestion
 
-- API is reachable;
-- transaction request succeeds;
-- source transaction is stored.
+- API is reachable
+- transaction request succeeds
+- transaction is persisted
 
 ### Outbox
 
-- outbox record is created for accepted transaction;
-- pending publication items can be identified if applicable.
+- outbox record is created
+- integration intent is registered
 
 ### Messaging
 
-- asynchronous publication flow occurs correctly;
-- consolidation receives the expected message shape.
+- message is published
+- message is consumed
 
 ### Consolidation
 
-- worker processes pending message;
-- batch lifecycle is traceable;
-- daily balance projection is updated.
+- transactions are processed
+- daily balance is updated
 
-### Read Path
+### Query
 
-- `GET /api/daily-balance/{date}` returns the consolidated result after processing.
-
-### Failure Visibility
-
-- failures are observable in logs/telemetry;
-- failed items can be traced for diagnosis.
+- daily balance endpoint returns correct data
 
 ---
 
-## 4. Main Operational Stores and Tables
+## Stress Test (Postman)
 
-Important runtime data areas include:
+A manual stress test was executed using a Postman collection.
 
-- source transaction data;
-- outbox/pending integration intent;
-- daily batch or processing lifecycle records;
-- `daily_balance` read model;
-- failed/reconciliation-oriented processing records.
+### Setup
 
-Operationally, this means diagnosis often requires understanding whether the issue is in:
+- 100 transaction requests
+- executed concurrently using async/parallel execution
+- endpoint tested: `POST /api/transactions`
 
-- ingestion;
-- publication;
-- messaging;
-- worker processing;
-- projection update.
+### Observed Behavior
 
----
+- all requests were successfully accepted
+- all transactions were persisted
+- all transactions were consolidated
+- no data inconsistency was observed
 
-## 5. Typical Runtime Flow
+### Architectural Interpretation
 
-### Step 1 — Ingestion
+This validates that:
 
-A client submits a transaction to the Transaction Service.
+- the write path is lightweight and resilient
+- asynchronous processing absorbs concurrent load
+- the system behaves correctly under parallel execution
+- ingestion is not blocked by consolidation
 
-### Step 2 — Durable Write
+### Limitations
 
-The service persists the source transaction and the integration intent.
+- not a formal performance benchmark
+- no latency metrics collected
+- no throughput saturation measurement
 
-### Step 3 — Asynchronous Continuation
-
-The platform publishes the pending event/message.
-
-### Step 4 — Worker Processing
-
-The Consolidation Service consumes the message and processes the referenced data.
-
-### Step 5 — Projection Update
-
-The `daily_balance` read model is updated.
-
-### Step 6 — Query
-
-The daily balance becomes available through the Transaction Service read endpoint.
-
-This sequence is important for operations because a query issue may be caused by lag in any intermediate step, not necessarily by a problem in the API itself.
+This test validates **correctness and resilience under concurrency**, not maximum system capacity.
 
 ---
 
-## 6. Degraded-Mode Understanding
+## Runtime Flow
 
-### If the API Is Healthy but Balance Is Stale
-
-Possible causes:
-
-- outbox backlog;
-- messaging delay;
-- worker failure;
-- projection update issue.
-
-Interpretation:
-
-- source data may already be safe;
-- derived data may still be catching up.
-
-### If Service Bus Is Temporarily Unavailable
-
-Expected behavior:
-
-- transactions may continue being accepted if the write path remains healthy;
-- pending propagation waits for recovery;
-- consolidation is delayed.
-
-Interpretation:
-
-- the system is degraded, but not necessarily down.
-
-### If the Worker Is Failing
-
-Expected behavior:
-
-- transaction ingestion may still continue;
-- read model freshness degrades;
-- failed items should become visible for diagnosis.
-
-This separation is fundamental to understanding platform health correctly.
+1. client sends transaction
+2. transaction is persisted
+3. outbox registers integration intent
+4. message is published
+5. consolidation service processes data
+6. daily balance is updated
+7. query returns consolidated result
 
 ---
 
-## 7. Operational Monitoring Focus
+## Degraded Mode
 
-At minimum, operations should monitor:
+### If Consolidation Fails
 
-### API Health
+- transactions are still accepted
+- balance becomes stale
+- system recovers later
 
-- request success rate;
-- latency;
-- dependency failures.
+### If Service Bus Fails
 
-### Database Health
-
-- connection stability;
-- query failures;
-- migration status.
-
-### Outbox Health
-
-- pending count/backlog;
-- age of oldest pending item.
-
-### Messaging Health
-
-- publication success/failure;
-- queue/topic/subscription backlog;
-- dead-letter or poison-message indicators.
-
-### Worker Health
-
-- processing success rate;
-- retry volume;
-- failure rate;
-- lag between ingestion and consolidation.
-
-### Business Readiness
-
-- freshness of `daily_balance`;
-- ability to query expected dates successfully.
+- transactions may still be accepted
+- consolidation is delayed
+- system degrades gracefully
 
 ---
 
-## 8. Deployment Operations
+## Monitoring Focus
 
-The repository already supports CI/CD-based delivery.
+Monitor:
 
-Operationally, deployment should follow this mindset:
-
-1. validate build and tests;
-2. apply database migrations safely;
-3. publish service artifacts;
-4. deploy services;
-5. verify runtime health;
-6. confirm post-deploy functionality.
-
-This sequence matters because asynchronous systems can appear “deployed” while still having broken background flow.
+- API success rate and latency
+- database connectivity
+- outbox backlog
+- messaging flow
+- worker processing success/failure
+- daily balance freshness
 
 ---
 
-## 9. Local Execution Example
+## Deployment
 
-### DB Migrator
+Deployment is automated via GitHub Actions:
 
-```bash
-export ConnectionStrings__Postgres="Host=localhost;Port=5432;Database=transactiondb;Username=postgres;Password=postgres"
+1. build
+2. test
+3. run migrations
+4. deploy services
 
-dotnet run \
-  --project ./db-migrator/db-migrator.csproj \
-  -- \
-  --migrations-path=./transaction-service/scripts
-```
+---
+
+## Troubleshooting Summary
+
+If something fails, check in order:
+
+1. transaction persisted?
+2. outbox created?
+3. message published?
+4. message consumed?
+5. consolidation executed?
+6. read model updated?
+
+---
+
+## Operational Maturity
+
+Current solution provides:
+
+- reproducible infrastructure
+- automated deployment
+- clear separation of concerns
+- resilient architecture
+
+Future improvements:
+
+- monitoring dashboards
+- alerting
+- replay tooling
+- DR and failover strategies
+
+---
+
+## Final Note
+
+Always analyze the system in two parts:
+
+- write path (ingestion)
+- read model (consolidation)
+
+They are intentionally decoupled and behave differently under load or failure.
