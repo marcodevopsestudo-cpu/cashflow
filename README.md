@@ -2,301 +2,131 @@
 
 ## Overview
 
-This solution implements a cash flow management system designed to handle financial transactions and provide **daily consolidated balance reports**.
+Cashflow is an event-driven solution designed to handle financial transaction ingestion and daily balance consolidation.
 
-The architecture was designed to meet strict non-functional requirements such as:
+The architecture prioritizes availability and resilience by separating:
 
-- High availability of the transaction ingestion service
-- Support for peak loads (≥ 50 requests per second)
-- Controlled eventual consistency for balance consolidation
-- Fault tolerance with minimal data loss (≤ 5%)
+- a **synchronous write path** (transaction ingestion)
+- an **asynchronous processing path** (daily consolidation)
 
----
-
-## Architecture
-
-The system is composed of three main components:
-
-### 1. Transaction Service
-
-Responsible for receiving, storing and exposing financial data.
-
-- Synchronous HTTP API
-- Implemented using **Azure Functions**
-- Persists transactions in PostgreSQL
-- Uses **Outbox Pattern** to guarantee reliable event publishing
-- Exposes read endpoints for both transactions and consolidated balance
-- Does NOT depend on consolidation to respond
-
-Endpoints:
-
-- `POST /api/transactions` → Register transaction
-- `GET /api/transactions/{id}` → Retrieve transaction
-- `GET /api/daily-balance/{date}` → Retrieve consolidated daily balance
-
-The daily balance query reads from a **pre-aggregated table (`daily_balance`)**, ensuring fast and scalable reads.
+This ensures that transaction ingestion remains available even if the consolidation flow is degraded or unavailable.
 
 ---
 
-### 2. Consolidation Service (Worker)
+## Why this design?
 
-Responsible for processing transactions asynchronously and updating the daily balance.
+This architecture prioritizes **availability of transaction ingestion over immediate consistency** of the daily balance.
 
-- Implemented using **Azure Functions**
-
-- Consumes events from Azure Service Bus
-
-- Processes transactions in batches
-
-- Aggregates values per:
-  - Date
-  - Transaction type (credit/debit)
-
-- Updates `daily_balance` table
-
-⚠️ This service is **eventually consistent** and runs asynchronously.
+This ensures that business operations are not blocked by downstream failures, at the cost of eventual consistency in the read model.
 
 ---
 
-### 3. DB Migrator
+## Business Context
 
-- Applies database schema migrations
-- Ensures environment consistency
-
----
-
-## Daily Balance (Business Requirement)
-
-The system maintains a **daily consolidated balance**, calculated as:
-
-- Sum of credits
-- Sum of debits
-- Final balance per day
-
-The balance is exposed via the Transaction Service:
-
-- `GET /api/daily-balance/{date}`
-
-Example:
-
-GET /api/daily-balance/2026-01-01
-
-The balance is:
-
-- NOT updated in real-time
-- Updated asynchronously within a configurable delay window (typically a few seconds)
-
-This design ensures system scalability and resilience.
+- Register financial transactions (credits/debits)
+- Provide daily consolidated balance
 
 ---
 
-## Non-Functional Requirements Strategy
+## Architecture Summary
 
-### ✔ High Availability
-
-The Transaction Service is fully independent from the Consolidation Service.
-
-Even if consolidation is unavailable:
-
-- Transactions continue to be accepted
-- Events are safely stored (Outbox)
-- Processing resumes later
+- Transaction Service → ingestion + queries
+- Consolidation Service → async processing
+- PostgreSQL → source of truth + read model
+- Service Bus → decoupling
+- Outbox Pattern → reliability
+- Terraform → infrastructure
+- GitHub Actions → CI/CD
 
 ---
 
-### ✔ Throughput (≥ 50 req/s)
+## Key Architectural Decisions
 
-Handled by:
+### Event-Driven Architecture
 
-- Stateless Transaction Service
-- Fast writes to PostgreSQL
-- Asynchronous processing via Service Bus
-- No synchronous coupling between services
+Decouples ingestion from processing.
 
-Instead of performing heavy calculations during the request, the system:
+### Transactional Outbox
 
-1. Persists the transaction quickly
-2. Publishes an event using the Outbox pattern
-3. Processes consolidation asynchronously
+Ensures no data is accepted without integration intent.
 
-This ensures the system can sustain high throughput without degrading response times.
+### Eventual Consistency
 
----
+Daily balance is updated asynchronously.
 
-### ✔ Data Loss Control (≤ 5%)
+### Failure Isolation
 
-Achieved through:
-
-- Transactional Outbox Pattern
-- Guaranteed delivery via Service Bus
-- Retry policies in worker
-- Dead-letter handling for failures
+Processing failures do not impact ingestion.
 
 ---
 
-### ✔ Eventual Consistency
+## Failure Scenario (Important)
 
-To meet performance and availability requirements:
+If Azure Service Bus is unavailable:
 
-- Balance updates are **not real-time**
-- Consolidation is processed asynchronously
-- Delay is configurable and typically within seconds
+- transactions are still accepted
+- data is persisted
+- consolidation is delayed
+- system recovers later
 
-This trade-off is intentional and aligned with system scalability goals.
-
----
-
-## How to Run Locally
-
-### Prerequisites
-
-- .NET 8
-- PostgreSQL
-- Azure Service Bus (or emulator if configured)
+👉 System degrades with delay, not failure.
 
 ---
 
-### Steps
+## Scalability
 
-1. Start PostgreSQL (local instance)
-
-2. Run DB Migrator:
-
-```bash
-dotnet run --project db-migrator
-```
-
-3. Run Transaction Service:
-
-```bash
-dotnet run --project transaction-service
-```
-
-4. Run Consolidation Worker:
-
-```bash
-dotnet run --project consolidation-service
-```
+- API is lightweight and stateless
+- Worker processes asynchronously
+- Read model is pre-aggregated
 
 ---
 
-## Testing
+## Validation
 
-The solution includes:
+Validated scenarios:
 
-- Unit Tests
-- Application Layer Tests
+- transaction ingestion
+- async consolidation
+- daily balance query
+- **100 concurrent requests (Postman)**
 
-Future improvements:
+Result:
 
-- Integration tests
-- Load tests (to validate throughput empirically)
-
----
-
-## CI/CD
-
-GitHub Actions pipelines are configured to:
-
-- Build
-- Run tests
-- Deploy infrastructure (Terraform)
-- Deploy services
-
----
-
-## Architectural Decisions
-
-Key design patterns used:
-
-- Outbox Pattern
-- Event-driven architecture
-- Worker-based background processing
-- Eventual consistency
-- Idempotent processing
+- all transactions persisted
+- all processed successfully
+- no data inconsistency observed
 
 ---
 
 ## Trade-offs
 
-| Decision                  | Reason                                      |
-| ------------------------- | ------------------------------------------- |
-| Eventual consistency      | Enables high throughput and availability    |
-| Asynchronous processing   | Prevents blocking transaction ingestion     |
-| Pre-aggregated read model | Enables fast and scalable queries           |
-| Batch processing          | Improves performance and reduces contention |
+| Decision         | Benefit      | Cost                   |
+| ---------------- | ------------ | ---------------------- |
+| Async processing | scalability  | delayed consistency    |
+| Outbox           | reliability  | complexity             |
+| Read model       | fast queries | projection maintenance |
 
 ---
 
-## What is Implemented vs Future Improvements
+## Documentation
 
-### Implemented
-
-- Transaction ingestion API
-- Daily balance query API (`/api/daily-balance/{date}`)
-- Reliable event publishing (Outbox)
-- Asynchronous consolidation
-- Daily balance aggregation logic
-- Error handling and retry mechanisms
-- CI/CD pipelines
-- Infrastructure as Code
-
-### Future Improvements
-
-- Load testing automation
-- Observability improvements (metrics, dashboards)
-- Advanced retry/backoff strategies
-- Multi-region resilience (if required)
+- [Architecture Overview](docs/architecture-overview.md)
+- [Non Functional Requirements](docs/non-functional-requirements.md)
+- [Requirements Traceability](docs/requirements-traceability.md)
+- [Operations Guide](docs/OPERATIONS.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [BC/DR and Resilience](docs/BC-DR-and-Resilience-Notes.md)
 
 ---
 
-## Final Notes
+## Final Positioning
 
-This solution prioritizes:
+This solution is an **MVP with strong architectural foundations**, designed to evolve into a production-grade system.
 
-- Reliability over immediacy
-- Scalability over synchronous consistency
-- Clear separation of responsibilities
+It demonstrates:
 
-The architecture ensures that transaction ingestion remains stable under load, while consolidation is handled asynchronously with controlled eventual consistency.
-
-## Architecture at a Glance
-
-```mermaid
-flowchart LR
-    Client[Client / Postman / Consumer App] -->|Microsoft Entra access token| TxApi[Transaction Service]
-    GitHub[GitHub Actions + OIDC] --> Azure[Azure Control Plane]
-
-    TxApi --> Pg[(PostgreSQL<br/>Transactions + Outbox Table)]
-    Pg --> Publisher[Timer-triggered Publisher]
-    Publisher --> Sb[(Azure Service Bus Topic)]
-    Sb --> Consolidation[Consolidation Service]
-    Consolidation --> Pg
-
-    TxApi --> Ai[Application Insights]
-    Consolidation --> Ai
-    TxApi --> Kv[Key Vault]
-    Consolidation --> Kv
-```
-
-## Implementation Status
-
-This solution focuses on demonstrating architectural decisions and system design aligned with the requirements.
-
-The core flows are implemented and functional, including:
-
-- Transaction ingestion
-- Reliable event publishing (Outbox)
-- Asynchronous consolidation
-- Daily balance aggregation
-- Query API for consolidated data
-
-Some aspects were intentionally left as next steps or partially validated:
-
-- Full end-to-end validation under load
-- Automated load testing for throughput verification (≥ 50 req/s)
-- Extended integration testing across services
-
-These decisions were made to prioritize clarity of architecture, separation of concerns, and non-functional requirement strategies.
-
-The current implementation demonstrates how the system behaves and scales, even if not all scenarios were exhaustively tested.
+- scalability
+- resilience
+- decoupling
+- reliability
+- operational maturity

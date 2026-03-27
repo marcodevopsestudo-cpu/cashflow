@@ -1,99 +1,85 @@
-This preserves the structure and substance already present in your current consolidation README, while organizing it better and removing weak spots like the old broken internal doc links. Your current file already includes the worker role, batch messages, MediatR flow, exponential backoff, manual review, the example contract, and local settings. :contentReference[oaicite:1]{index=1}
+# Infrastructure Overview
+
+## Overview
+
+Infrastructure is provisioned using Terraform and deployed on Microsoft Azure.
+
+The goal is to ensure:
+
+- reproducibility
+- consistency across environments
+- automated provisioning
+- secure configuration
 
 ---
 
-## 2) File: `README.md`
+## Resources Created
 
-### Directory
+The infrastructure includes:
 
-`/infra/README.md`
-
-````md
-# Infrastructure
-
-This directory contains the Terraform code used to provision the Azure resources required by the cashflow solution.
-
-The infrastructure supports:
-
-- the Transaction Service;
-- the Consolidation Service;
-- shared platform capabilities such as observability, messaging, identity and secret management.
-
----
-
-## Provisioned Azure Resources
-
-The Terraform code provisions the main cloud resources used by the solution, including:
+### Core Resources
 
 - Resource Group
-- Storage Account for Azure Functions
-- Linux Function Apps
-- Application Insights
-- Azure Database for PostgreSQL Flexible Server
-- Azure Service Bus namespace and topic
-- Key Vault
-- Microsoft Entra ID application registrations used by the solution
-- Microsoft Entra ID application registration used by GitHub Actions OIDC
+- Storage Account (for Azure Functions runtime)
 
-This infrastructure reflects the architectural goals of the project:
+### Compute
 
-- serverless execution;
-- low operational overhead;
-- secure service-to-service integration;
-- resilient asynchronous communication.
+- Azure Function App (Transaction Service)
+- Azure Function App (Consolidation Service)
 
----
+### Data
 
-## Architectural Role of the Infrastructure
+- Azure PostgreSQL Flexible Server
+- Database for application data
 
-The infrastructure is not only deployment support; it is part of the design.
+### Messaging
 
-### Availability and decoupling
-
-Azure Service Bus allows the write path and the consolidation path to operate independently.
-
-### Observability
-
-Application Insights provides centralized logs and telemetry for the Function Apps.
+- Azure Service Bus Namespace
+- Topic for event publishing
+- (Subscription may be manually created or extended via Terraform)
 
 ### Security
 
-The solution uses Azure-native identity and secret management patterns, including:
+- Azure Key Vault (for secrets)
+- Microsoft Entra ID applications
 
-- Microsoft Entra ID
-- Managed Identity
-- Key Vault
-- RBAC
-- GitHub OIDC for CI/CD authentication
+### Observability
 
-### Cost model
-
-Azure Functions supports the serverless, pay-per-use model adopted by the solution.
+- Application Insights
 
 ---
 
-## Directory Structure
+## Architecture Role
 
-At a high level, this directory contains:
+The infrastructure supports:
 
-- reusable Terraform modules;
-- bootstrap resources for remote state;
-- environment-specific configuration;
-- example variable files and backend configuration templates.
+- decoupled communication (Service Bus)
+- durable persistence (PostgreSQL)
+- secure secret management (Key Vault)
+- monitoring and diagnostics (Application Insights)
 
 ---
 
-## State Management
+## CI/CD Integration
 
-Use the bootstrap project to create the remote backend resources and then initialize the target environment with a `backend.hcl` file.
+Infrastructure and application deployment are integrated with:
+
+- GitHub Actions
+- OIDC authentication (no stored credentials)
+
+Pipeline responsibilities:
+
+- build
+- test
+- run migrations
+- deploy services
+
+---
+
+## How to Apply Infrastructure
 
 ```bash
-cd infra/bootstrap/tfstate
 terraform init
-terraform apply -var="subscription_id=" -var="tenant_id="
-
-cd ../../envs/dev
-cp backend.dev.hcl.example backend.hcl
-terraform init -backend-config=backend.hcl -reconfigure
+terraform plan
+terraform apply
 ```
-````
