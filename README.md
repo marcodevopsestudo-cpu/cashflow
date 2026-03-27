@@ -101,7 +101,6 @@ The solution enforces authentication and authorization using Microsoft Entra ID.
 
 Security and request integrity concerns are centralized using middleware:
 
-- Authentication middleware validates incoming tokens.
 - Authorization middleware enforces access policies.
 - Idempotency middleware ensures that duplicate requests do not result in duplicated operations.
 - Correlation ID middleware ensures traceability across secure requests.
@@ -189,6 +188,7 @@ This solution is an **MVP with strong architectural foundations**, designed to e
 
 It demonstrates:
 
+- security
 - scalability
 - resilience
 - decoupling
