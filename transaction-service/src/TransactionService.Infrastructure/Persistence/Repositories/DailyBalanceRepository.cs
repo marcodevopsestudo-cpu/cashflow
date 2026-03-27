@@ -17,6 +17,7 @@ public sealed class DailyBalanceRepository : IDailyBalanceRepository
     /// <param name="dbContext">The database context used to access persistence.</param>
     public DailyBalanceRepository(TransactionDbContext dbContext)
     {
+
         _dbContext = dbContext;
     }
 
