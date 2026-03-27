@@ -2,26 +2,6 @@
 
 ## 1. Architectural Context
 
-The challenge requires two core business capabilities:
-
-- transaction control;
-- daily consolidated balance.
-
-It also defines a critical non-functional requirement:
-
-> the transaction service must remain available even if the daily consolidation service fails.
-
-That requirement is the main driver of the architecture.
-
-Instead of designing a synchronous end-to-end flow, the solution separates the system into:
-
-- a **write path**, optimized for low-latency and availability;
-- a **processing path**, optimized for asynchronous consolidation and recoverability.
-
-# Architecture Overview
-
-## 1. Architectural Context
-
 The challenge requires two core capabilities:
 
 - transaction control;
@@ -44,37 +24,7 @@ This is a deliberate architectural trade-off in favor of availability and resili
 
 ## 2. High-Level Architecture
 
-````mermaid
-flowchart LR
-    Client[Client / Postman / Consumer App]
-    TxApi[Transaction Service]
-    Pg[(PostgreSQL<br/>Transactions + Outbox + Read Model)]
-    Publisher[Outbox Publisher]
-    Sb[(Azure Service Bus)]
-    Consolidation[Consolidation Service]
-    Ai[Application Insights]
-    Kv[Key Vault]
-    GitHub[GitHub Actions + OIDC]
-    Azure[Azure Control Plane]
-    Tf[Terraform IaC]
-
-    Client -->|HTTP| TxApi
-    TxApi --> Pg
-    Pg --> Publisher
-    Publisher --> Sb
-    Sb --> Consolidation
-    Consolidation --> Pg
-    TxApi --> Ai
-    Consolidation --> Ai
-    TxApi --> Kv
-    Consolidation --> Kv
-    GitHub --> Azure
-    Tf --> Azure
 This design favors **availability, decoupling and resilience** over strict immediate consistency.
-
----
-
-## 2. High-Level Architecture
 
 ```mermaid
 flowchart LR
@@ -91,9 +41,11 @@ flowchart LR
     Consolidation --> Ai
     TxApi --> Kv[Key Vault]
     Consolidation --> Kv
-````
+```
 
-## Throughput and Availability Strategy
+---
+
+## 3. Throughput and Availability Strategy
 
 The system was designed to eliminate bottlenecks between transaction ingestion and balance computation.
 
