@@ -92,3 +92,15 @@ flowchart LR
     TxApi --> Kv[Key Vault]
     Consolidation --> Kv
 ````
+
+## Throughput and Availability Strategy
+
+The system was designed to eliminate bottlenecks between transaction ingestion and balance computation.
+
+By isolating the transaction write path from the balance read model, the system ensures that high write throughput does not impact query performance.
+
+Daily balance queries are executed against a consolidated and indexed data store, providing fast and predictable response times.
+
+Asynchronous processing via messaging enables horizontal scalability of the consolidation process, allowing the system to handle increased load without degrading availability.
+
+This approach ensures that the system meets and exceeds the requirement of handling high request rates while tolerating partial processing delays without affecting user-facing operations.
